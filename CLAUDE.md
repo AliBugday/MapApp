@@ -33,6 +33,21 @@ Priorities, in order:
 
 This is also a learning project. Explain important architectural decisions when they are not obvious.
 
+## Incremental Development and Verification
+
+Build this project in small, ordered steps. Each step must be verified as working before starting the next one.
+
+A step is not finished until it has been *observed* working, not merely written:
+
+* Start the relevant service and confirm it actually runs.
+* Exercise the new behaviour end to end (an HTTP request, a page load, a query), not just the code path in isolation.
+* Run the relevant tests and linters for that step.
+* If a step cannot be verified, say so explicitly rather than moving on.
+
+Do not stack several unverified steps and check them all at the end. When something breaks, the cause should be traceable to the one change that introduced it.
+
+Report verification results honestly. If a check fails, was skipped, or was not possible in the current environment, state that plainly along with the actual output.
+
 ## Planned Technology Stack
 
 ### Backend
