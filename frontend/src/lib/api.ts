@@ -1,0 +1,93 @@
+export interface Report {
+  id: number;
+  title: string;
+  description: string;
+  status: "open" | "in_progress" | "resolved" | "rejected";
+  latitude: number;
+  longitude: number;
+  author_username: string | null;
+  upvote_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Paginated<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+/**
+ * The single place that knows about Django's CSRF requirement.
+ *
+ * Requests go to relative URLs so Next.js proxies them to Django on the same
+ * origin; unsafe methods carry the csrftoken cookie back as an X-CSRFToken header.
+ * No component should call fetch() against the API directly.
+ */
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const headers = new Headers(options.headers);
+
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (!SAFE_METHODS.has(method)) {
+    const token = readCookie("csrftoken");
+    if (token) headers.set("X-CSRFToken", token);
+  }
+
+  const response = await fetch(path, { ...options, method, headers, credentials: "same-origin" });
+
+  if (!response.ok) {
+    throw new ApiError(await describeError(response), response.status);
+  }
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
+async function describeError(response: Response): Promise<string> {
+  if (response.status === 403) {
+    return "You need to be signed in to do that. Open /admin to log in.";
+  }
+  try {
+    const body = await response.json();
+    const firstField = Object.entries(body)[0];
+    if (firstField) {
+      const [field, messages] = firstField;
+      return `${field}: ${Array.isArray(messages) ? messages.join(", ") : String(messages)}`;
+    }
+  } catch {
+    // Fall through to the generic message below.
+  }
+  return `Request failed (${response.status})`;
+}
+
+export function fetchReports(): Promise<Paginated<Report>> {
+  return apiFetch<Paginated<Report>>("/api/reports/");
+}
+
+export function createReport(input: {
+  title: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+}): Promise<Report> {
+  return apiFetch<Report>("/api/reports/", { method: "POST", body: JSON.stringify(input) });
+}
