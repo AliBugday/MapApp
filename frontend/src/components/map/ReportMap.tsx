@@ -26,13 +26,7 @@ function ClickHandler({ onMapClick }: { onMapClick: (position: LatLng) => void }
   return null;
 }
 
-export default function ReportMap({
-  reports,
-  pending,
-  onMapClick,
-  center,
-  zoom,
-}: ReportMapProps) {
+export default function ReportMap({ reports, pending, onMapClick, center, zoom }: ReportMapProps) {
   return (
     <MapContainer
       center={[center.latitude, center.longitude]}
