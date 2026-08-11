@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { ApiError, createReport, fetchReports, type Report } from "@/lib/api";
+import { useUser } from "@/lib/auth";
+import AuthPanel from "@/components/auth/AuthPanel";
 import type { LatLng } from "./types";
 import NewReportForm from "./NewReportForm";
 
@@ -17,6 +19,7 @@ const ReportMap = dynamic(() => import("./ReportMap"), {
 const ISTANBUL: LatLng = { latitude: 41.0082, longitude: 28.9784 };
 
 export default function MapPanel() {
+  const { user, loading: userLoading } = useUser();
   const [reports, setReports] = useState<Report[]>([]);
   const [pending, setPending] = useState<LatLng | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +85,12 @@ export default function MapPanel() {
           </p>
         )}
 
-        {pending ? (
+        {/* A signed-out visitor gets the auth form here rather than a "go to /admin" dead
+            end. Any pending map click is kept, so signing in drops them straight into the
+            new-report form for the spot they picked. */}
+        {userLoading ? null : !user ? (
+          <AuthPanel />
+        ) : pending ? (
           <NewReportForm
             position={pending}
             onSubmit={handleCreate}
