@@ -26,11 +26,17 @@ export default function MapPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // has_upvoted is per-user, so a fetch taken while signed in as one user is wrong for
+    // the next: refetch whenever the signed-in identity changes, not just once at mount.
+    // Waiting for userLoading also skips an extra anonymous-then-authenticated round trip
+    // for a visitor who is already signed in on page load.
+    if (userLoading) return;
+    setLoading(true);
     fetchReports()
       .then((page) => setReports(page.results))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [userLoading, user?.id]);
 
   const handleCreate = useCallback(
     async (input: { title: string; description: string }) => {

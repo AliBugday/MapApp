@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<Report["status"], string> = {
 export default function ReportDetailPage() {
   const params = useParams<{ id: string }>();
   const reportId = Number(params.id);
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
 
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,11 +37,15 @@ export default function ReportDetailPage() {
       setLoading(false);
       return;
     }
+    // has_upvoted is per-user: refetch whenever the signed-in identity changes, e.g. a
+    // login/logout without leaving this page, not just once when the id first appears.
+    if (userLoading) return;
+    setLoading(true);
     fetchReport(reportId)
       .then(setReport)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [reportId]);
+  }, [reportId, userLoading, user?.id]);
 
   const handleToggleUpvote = useCallback(async () => {
     if (!report) return;
