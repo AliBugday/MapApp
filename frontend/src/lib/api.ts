@@ -11,6 +11,12 @@ export interface Report {
   updated_at: string;
 }
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+}
+
 export interface Paginated<T> {
   count: number;
   next: string | null;
@@ -64,10 +70,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
 async function describeError(response: Response): Promise<string> {
   if (response.status === 403) {
-    return "You need to be signed in to do that. Open /admin to log in.";
+    return "You need to be signed in to do that.";
   }
   try {
     const body = await response.json();
+    // DRF's own errors ("detail") are already written for a human; field errors are
+    // keyed by field name, which is worth showing so the user knows what to fix.
+    if (typeof body.detail === "string") {
+      return body.detail;
+    }
     const firstField = Object.entries(body)[0];
     if (firstField) {
       const [field, messages] = firstField;
@@ -77,6 +88,32 @@ async function describeError(response: Response): Promise<string> {
     // Fall through to the generic message below.
   }
   return `Request failed (${response.status})`;
+}
+
+/**
+ * Who is signed in, or null.
+ *
+ * Also the call that seeds Django's csrftoken cookie (the endpoint sets it), so the
+ * frontend must make this request before any POST can succeed.
+ */
+export async function fetchMe(): Promise<User | null> {
+  const { user } = await apiFetch<{ user: User | null }>("/api/auth/me/");
+  return user;
+}
+
+export function register(input: { username: string; password: string }): Promise<User> {
+  return apiFetch<User>("/api/auth/register/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function login(input: { username: string; password: string }): Promise<User> {
+  return apiFetch<User>("/api/auth/login/", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function logout(): Promise<void> {
+  return apiFetch<void>("/api/auth/logout/", { method: "POST" });
 }
 
 export function fetchReports(): Promise<Paginated<Report>> {
