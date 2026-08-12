@@ -15,6 +15,7 @@ export interface ReportMapProps {
   reports: Report[];
   pending: LatLng | null;
   onMapClick: (position: LatLng) => void;
+  onToggleUpvote: (report: Pick<Report, "id" | "has_upvoted">) => void;
   center: LatLng;
   zoom: number;
 }

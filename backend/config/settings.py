@@ -102,9 +102,13 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
 }
 
-LANGUAGE_CODE = "en-us"
+# Django and DRF ship complete Turkish translations for their own built-in messages
+# (password validators, "not found", permission errors, etc.), so this alone covers
+# everything except the messages this app writes itself.
+LANGUAGE_CODE = "tr"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True

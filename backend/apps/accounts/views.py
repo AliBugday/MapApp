@@ -44,7 +44,7 @@ class LoginView(APIView):
             # One message for both a wrong username and a wrong password, so the response
             # can't be used to discover which usernames exist.
             return Response(
-                {"detail": "Incorrect username or password."},
+                {"detail": "Kullanıcı adı veya şifre hatalı."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         login(request, user)

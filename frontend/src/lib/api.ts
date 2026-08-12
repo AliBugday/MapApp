@@ -7,8 +7,23 @@ export interface Report {
   longitude: number;
   author_username: string | null;
   upvote_count: number;
+  /** Whether the *current* user has upvoted; always present, false when anonymous. */
+  has_upvoted: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Comment {
+  id: number;
+  body: string;
+  author_username: string;
+  created_at: string;
+}
+
+/** What the upvote endpoint returns, for reconciling an optimistic update. */
+export interface UpvoteState {
+  upvote_count: number;
+  has_upvoted: boolean;
 }
 
 export interface User {
@@ -68,26 +83,39 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
+// Only the handful of field names that actually appear in a form on this site need a
+// human label; anything else falls back to the raw key rather than growing this table
+// for fields no user ever sees an error for.
+const FIELD_LABELS: Record<string, string> = {
+  username: "Kullanıcı adı",
+  password: "Şifre",
+  title: "Başlık",
+  description: "Açıklama",
+  body: "Yorum",
+};
+
 async function describeError(response: Response): Promise<string> {
   if (response.status === 403) {
-    return "You need to be signed in to do that.";
+    return "Bunu yapmak için giriş yapmış olmanız gerekir.";
   }
   try {
     const body = await response.json();
-    // DRF's own errors ("detail") are already written for a human; field errors are
-    // keyed by field name, which is worth showing so the user knows what to fix.
+    // DRF's own errors ("detail") are already written for a human — and, with
+    // LANGUAGE_CODE="tr" on the backend, already in Turkish. Field errors are keyed by
+    // field name, which is worth showing so the user knows what to fix.
     if (typeof body.detail === "string") {
       return body.detail;
     }
     const firstField = Object.entries(body)[0];
     if (firstField) {
       const [field, messages] = firstField;
-      return `${field}: ${Array.isArray(messages) ? messages.join(", ") : String(messages)}`;
+      const label = FIELD_LABELS[field] ?? field;
+      return `${label}: ${Array.isArray(messages) ? messages.join(", ") : String(messages)}`;
     }
   } catch {
     // Fall through to the generic message below.
   }
-  return `Request failed (${response.status})`;
+  return `İstek başarısız oldu (${response.status})`;
 }
 
 /**
@@ -114,6 +142,34 @@ export function login(input: { username: string; password: string }): Promise<Us
 
 export function logout(): Promise<void> {
   return apiFetch<void>("/api/auth/logout/", { method: "POST" });
+}
+
+/**
+ * Add or remove the current user's upvote.
+ *
+ * Both directions are idempotent server-side, so a retry after a failed request is
+ * safe and cannot double-count.
+ */
+export function setUpvote(reportId: number, upvoted: boolean): Promise<UpvoteState> {
+  return apiFetch<UpvoteState>(`/api/reports/${reportId}/upvote/`, {
+    method: upvoted ? "POST" : "DELETE",
+  });
+}
+
+export function fetchReport(reportId: number): Promise<Report> {
+  return apiFetch<Report>(`/api/reports/${reportId}/`);
+}
+
+/** A flat array, not a paginated envelope — see the comments action in views.py. */
+export function fetchComments(reportId: number): Promise<Comment[]> {
+  return apiFetch<Comment[]>(`/api/reports/${reportId}/comments/`);
+}
+
+export function createComment(reportId: number, body: string): Promise<Comment> {
+  return apiFetch<Comment>(`/api/reports/${reportId}/comments/`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
 }
 
 export function fetchReports(): Promise<Paginated<Report>> {

@@ -30,18 +30,18 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 style={{ fontSize: "0.95rem", marginTop: 0 }}>New report</h2>
+      <h2 style={{ fontSize: "0.95rem", marginTop: 0 }}>Yeni bildirim</h2>
       <p style={{ color: "var(--muted)", fontSize: "0.78rem", marginTop: 0 }}>
         {position.latitude.toFixed(5)}, {position.longitude.toFixed(5)}
       </p>
 
       <label style={{ display: "block", marginBottom: "0.5rem" }}>
-        <span style={{ fontSize: "0.8rem" }}>Title</span>
+        <span style={{ fontSize: "0.8rem" }}>Başlık</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} />
       </label>
 
       <label style={{ display: "block", marginBottom: "0.75rem" }}>
-        <span style={{ fontSize: "0.8rem" }}>Description</span>
+        <span style={{ fontSize: "0.8rem" }}>Açıklama</span>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </label>
 
@@ -57,7 +57,7 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
             padding: "0.5rem 0.9rem",
           }}
         >
-          {saving ? "Saving…" : "Save"}
+          {saving ? "Kaydediliyor…" : "Kaydet"}
         </button>
         <button
           type="button"
@@ -69,7 +69,7 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
             padding: "0.5rem 0.9rem",
           }}
         >
-          Cancel
+          İptal
         </button>
       </div>
     </form>

@@ -7,6 +7,10 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
+import Link from "next/link";
+
+import UpvoteButton from "@/components/UpvoteButton";
+import { STATUS_LABELS } from "@/lib/statusLabels";
 import type { LatLng, ReportMapProps } from "./types";
 
 // Leaflet resolves its default icons with relative URLs that break under a bundler,
@@ -26,7 +30,14 @@ function ClickHandler({ onMapClick }: { onMapClick: (position: LatLng) => void }
   return null;
 }
 
-export default function ReportMap({ reports, pending, onMapClick, center, zoom }: ReportMapProps) {
+export default function ReportMap({
+  reports,
+  pending,
+  onMapClick,
+  onToggleUpvote,
+  center,
+  zoom,
+}: ReportMapProps) {
   return (
     <MapContainer
       center={[center.latitude, center.longitude]}
@@ -45,16 +56,27 @@ export default function ReportMap({ reports, pending, onMapClick, center, zoom }
             <strong>{report.title}</strong>
             {report.description && <p style={{ margin: "0.25rem 0" }}>{report.description}</p>}
             <small>
-              {report.status} &middot; {report.upvote_count} upvotes
-              {report.author_username ? ` · by ${report.author_username}` : ""}
+              {STATUS_LABELS[report.status]}
+              {report.author_username ? ` · bildiren: ${report.author_username}` : ""}
             </small>
+            <div
+              style={{
+                marginTop: "0.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+              }}
+            >
+              <UpvoteButton report={report} onToggle={onToggleUpvote} />
+              <Link href={`/reports/${report.id}`}>Detaylar ve yorumlar</Link>
+            </div>
           </Popup>
         </Marker>
       ))}
 
       {pending && (
         <Marker position={[pending.latitude, pending.longitude]} opacity={0.6}>
-          <Popup>New report here</Popup>
+          <Popup>Buraya yeni bildirim</Popup>
         </Marker>
       )}
     </MapContainer>

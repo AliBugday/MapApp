@@ -7,10 +7,12 @@ class Report(models.Model):
     """A civic issue or request pinned to a geographic point."""
 
     class Status(models.TextChoices):
-        OPEN = "open", "Open"
-        IN_PROGRESS = "in_progress", "In progress"
-        RESOLVED = "resolved", "Resolved"
-        REJECTED = "rejected", "Rejected"
+        # Stored values (left) stay in English — they're an API/DB contract, not UI text.
+        # Only the human-readable label (right, used by the Django admin) is Turkish.
+        OPEN = "open", "Açık"
+        IN_PROGRESS = "in_progress", "İşlemde"
+        RESOLVED = "resolved", "Çözüldü"
+        REJECTED = "rejected", "Reddedildi"
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)

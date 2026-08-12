@@ -105,7 +105,7 @@ def test_login_for_an_unknown_user_gives_the_same_error(client):
     )
 
     assert response.status_code == 400
-    assert response.data["detail"] == "Incorrect username or password."
+    assert response.data["detail"] == "Kullanıcı adı veya şifre hatalı."
 
 
 @pytest.mark.django_db

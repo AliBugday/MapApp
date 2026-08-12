@@ -21,7 +21,7 @@ export default function AppHeader() {
     >
       <h1 style={{ margin: 0, fontSize: "1.1rem" }}>MapApp</h1>
       <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-        Click the map to report an issue.
+        Bir sorun bildirmek için haritaya tıklayın.
       </span>
 
       <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: "0.85rem" }}>
@@ -29,7 +29,7 @@ export default function AppHeader() {
           "…"
         ) : user ? (
           <>
-            Signed in as <strong>{user.username}</strong>{" "}
+            Giriş yapan: <strong>{user.username}</strong>{" "}
             <button
               type="button"
               onClick={() => void signOut()}
@@ -43,11 +43,11 @@ export default function AppHeader() {
                 font: "inherit",
               }}
             >
-              Log out
+              Çıkış yap
             </button>
           </>
         ) : (
-          "Not signed in"
+          "Giriş yapılmadı"
         )}
       </span>
     </header>
