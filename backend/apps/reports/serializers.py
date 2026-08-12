@@ -1,7 +1,18 @@
 from django.contrib.gis.geos import Point
 from rest_framework import serializers
 
-from .models import Report
+from .models import Comment, Report
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """report and author are set from the URL and the session, never from the payload."""
+
+    author_username = serializers.CharField(source="author.username", read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ["id", "body", "author_username", "created_at"]
+        read_only_fields = ["id", "author_username", "created_at"]
 
 
 class ReportSerializer(serializers.ModelSerializer):

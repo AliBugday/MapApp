@@ -1,13 +1,13 @@
 from django.contrib.gis.geos import Polygon
 from django.db.models import BooleanField, Count, Exists, OuterRef, Value
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from .models import Report, Upvote
-from .serializers import ReportSerializer
+from .serializers import CommentSerializer, ReportSerializer
 
 
 def parse_bbox(raw: str) -> Polygon:
@@ -90,3 +90,26 @@ class ReportViewSet(
             Upvote.objects.filter(report=report, user=request.user).delete()
             has_upvoted = False
         return Response({"upvote_count": report.upvotes.count(), "has_upvoted": has_upvoted})
+
+    @action(detail=True, methods=["get", "post"], url_path="comments")
+    def comments(self, request, pk=None):
+        """List or add comments on one report.
+
+        Returned as a flat array rather than a paginated envelope: a report's comments are
+        read all at once on the detail page, and a second response shape would be one more
+        thing for the frontend to special-case.
+
+        The author comes from the session and the report from the URL, so neither can be
+        forged through the payload. GET is public via IsAuthenticatedOrReadOnly; POST is not.
+        """
+        report = self.get_object()
+
+        if request.method == "POST":
+            serializer = CommentSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(report=report, author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        # select_related because the serializer reads author.username on every row.
+        queryset = report.comments.select_related("author")
+        return Response(CommentSerializer(queryset, many=True).data)
