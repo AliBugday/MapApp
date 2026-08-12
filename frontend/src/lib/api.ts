@@ -83,26 +83,39 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
+// Only the handful of field names that actually appear in a form on this site need a
+// human label; anything else falls back to the raw key rather than growing this table
+// for fields no user ever sees an error for.
+const FIELD_LABELS: Record<string, string> = {
+  username: "Kullanıcı adı",
+  password: "Şifre",
+  title: "Başlık",
+  description: "Açıklama",
+  body: "Yorum",
+};
+
 async function describeError(response: Response): Promise<string> {
   if (response.status === 403) {
-    return "You need to be signed in to do that.";
+    return "Bunu yapmak için giriş yapmış olmanız gerekir.";
   }
   try {
     const body = await response.json();
-    // DRF's own errors ("detail") are already written for a human; field errors are
-    // keyed by field name, which is worth showing so the user knows what to fix.
+    // DRF's own errors ("detail") are already written for a human — and, with
+    // LANGUAGE_CODE="tr" on the backend, already in Turkish. Field errors are keyed by
+    // field name, which is worth showing so the user knows what to fix.
     if (typeof body.detail === "string") {
       return body.detail;
     }
     const firstField = Object.entries(body)[0];
     if (firstField) {
       const [field, messages] = firstField;
-      return `${field}: ${Array.isArray(messages) ? messages.join(", ") : String(messages)}`;
+      const label = FIELD_LABELS[field] ?? field;
+      return `${label}: ${Array.isArray(messages) ? messages.join(", ") : String(messages)}`;
     }
   } catch {
     // Fall through to the generic message below.
   }
-  return `Request failed (${response.status})`;
+  return `İstek başarısız oldu (${response.status})`;
 }
 
 /**

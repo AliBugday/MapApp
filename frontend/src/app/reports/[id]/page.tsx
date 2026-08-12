@@ -6,16 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, fetchReport, setUpvote, type Report } from "@/lib/api";
 import { useUser } from "@/lib/auth";
+import { STATUS_LABELS } from "@/lib/statusLabels";
 import AppHeader from "@/components/AppHeader";
 import UpvoteButton from "@/components/UpvoteButton";
 import CommentSection from "@/components/reports/CommentSection";
-
-const STATUS_LABELS: Record<Report["status"], string> = {
-  open: "Open",
-  in_progress: "In progress",
-  resolved: "Resolved",
-  rejected: "Rejected",
-};
 
 /**
  * A client component, so it shares the UserProvider in the root layout and can reuse
@@ -33,7 +27,7 @@ export default function ReportDetailPage() {
 
   useEffect(() => {
     if (!Number.isInteger(reportId)) {
-      setError("That report id is not valid.");
+      setError("Bu bildirim kimliği geçerli değil.");
       setLoading(false);
       return;
     }
@@ -50,7 +44,7 @@ export default function ReportDetailPage() {
   const handleToggleUpvote = useCallback(async () => {
     if (!report) return;
     if (!user) {
-      setError("Sign in on the map page to upvote.");
+      setError("Oy vermek için harita sayfasından giriş yapın.");
       return;
     }
     const previous = report;
@@ -69,7 +63,7 @@ export default function ReportDetailPage() {
       setError(null);
     } catch (err) {
       setReport(previous);
-      setError(err instanceof ApiError ? err.message : "Could not register that vote.");
+      setError(err instanceof ApiError ? err.message : "Oy kaydedilemedi.");
     }
   }, [report, user]);
 
@@ -79,10 +73,10 @@ export default function ReportDetailPage() {
 
       <div style={{ padding: "1.5rem", maxWidth: 680, width: "100%", margin: "0 auto" }}>
         <Link href="/" style={{ fontSize: "0.85rem" }}>
-          ← Back to the map
+          ← Haritaya dön
         </Link>
 
-        {loading && <p style={{ color: "var(--muted)" }}>Loading report…</p>}
+        {loading && <p style={{ color: "var(--muted)" }}>Bildirim yükleniyor…</p>}
 
         {error && !report && (
           <p
@@ -103,14 +97,14 @@ export default function ReportDetailPage() {
             <h1 style={{ marginBottom: "0.25rem" }}>{report.title}</h1>
             <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginTop: 0 }}>
               {STATUS_LABELS[report.status]}
-              {report.author_username ? ` · reported by ${report.author_username}` : ""} ·{" "}
+              {report.author_username ? ` · bildiren: ${report.author_username}` : ""} ·{" "}
               {new Date(report.created_at).toLocaleDateString()}
             </p>
 
             {report.description ? (
               <p style={{ whiteSpace: "pre-wrap" }}>{report.description}</p>
             ) : (
-              <p style={{ color: "var(--muted)", fontStyle: "italic" }}>No description given.</p>
+              <p style={{ color: "var(--muted)", fontStyle: "italic" }}>Açıklama verilmedi.</p>
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>

@@ -26,7 +26,7 @@ export default function UpvoteButton({
       // aria-pressed rather than just a colour change, so the state is available to
       // screen readers and not conveyed by styling alone.
       aria-pressed={upvoted}
-      aria-label={upvoted ? "Remove your upvote" : "Upvote this report"}
+      aria-label={upvoted ? "Oyunuzu geri çekin" : "Bu bildirime oy verin"}
       style={{
         display: "inline-flex",
         alignItems: "center",

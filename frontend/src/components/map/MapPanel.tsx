@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 
 import { ApiError, createReport, fetchReports, setUpvote, type Report } from "@/lib/api";
 import { useUser } from "@/lib/auth";
+import { STATUS_LABELS } from "@/lib/statusLabels";
 import AuthPanel from "@/components/auth/AuthPanel";
 import type { LatLng } from "./types";
 import NewReportForm from "./NewReportForm";
@@ -13,7 +14,7 @@ import NewReportForm from "./NewReportForm";
 // rendering, so the map is loaded only in the browser.
 const ReportMap = dynamic(() => import("./ReportMap"), {
   ssr: false,
-  loading: () => <p style={{ padding: "1rem", color: "var(--muted)" }}>Loading map…</p>,
+  loading: () => <p style={{ padding: "1rem", color: "var(--muted)" }}>Harita yükleniyor…</p>,
 });
 
 const ISTANBUL: LatLng = { latitude: 41.0082, longitude: 28.9784 };
@@ -48,7 +49,7 @@ export default function MapPanel() {
         setPending(null);
         setError(null);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "Could not save the report.");
+        setError(err instanceof ApiError ? err.message : "Bildirim kaydedilemedi.");
       }
     },
     [pending],
@@ -57,7 +58,7 @@ export default function MapPanel() {
   const handleToggleUpvote = useCallback(
     async (target: Pick<Report, "id" | "has_upvoted">) => {
       if (!user) {
-        setError("Sign in to upvote — the form is in this sidebar.");
+        setError("Oy vermek için giriş yapmalısınız — giriş formu yan panelde.");
         return;
       }
       const previous = reports.find((r) => r.id === target.id);
@@ -80,7 +81,7 @@ export default function MapPanel() {
         // Roll back to what the server last told us, rather than leaving a count the
         // database does not agree with.
         patch({ has_upvoted: previous.has_upvoted, upvote_count: previous.upvote_count });
-        setError(err instanceof ApiError ? err.message : "Could not register that vote.");
+        setError(err instanceof ApiError ? err.message : "Oy kaydedilemedi.");
       }
     },
     [user, reports],
@@ -137,14 +138,14 @@ export default function MapPanel() {
           />
         ) : (
           <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
-            Click anywhere on the map to add a report.
+            Bildirim eklemek için haritada bir yere tıklayın.
           </p>
         )}
 
         <h2 style={{ fontSize: "0.95rem", marginTop: "1.5rem" }}>
-          Reports {loading ? "" : `(${reports.length})`}
+          Bildirimler {loading ? "" : `(${reports.length})`}
         </h2>
-        {loading && <p style={{ color: "var(--muted)" }}>Loading…</p>}
+        {loading && <p style={{ color: "var(--muted)" }}>Yükleniyor…</p>}
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {reports.map((report) => (
             <li
@@ -153,7 +154,8 @@ export default function MapPanel() {
             >
               <strong style={{ fontSize: "0.9rem" }}>{report.title}</strong>
               <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
-                {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)} · {report.status}
+                {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)} ·{" "}
+                {STATUS_LABELS[report.status]}
               </div>
             </li>
           ))}

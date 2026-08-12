@@ -10,6 +10,7 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import Link from "next/link";
 
 import UpvoteButton from "@/components/UpvoteButton";
+import { STATUS_LABELS } from "@/lib/statusLabels";
 import type { LatLng, ReportMapProps } from "./types";
 
 // Leaflet resolves its default icons with relative URLs that break under a bundler,
@@ -55,8 +56,8 @@ export default function ReportMap({
             <strong>{report.title}</strong>
             {report.description && <p style={{ margin: "0.25rem 0" }}>{report.description}</p>}
             <small>
-              {report.status}
-              {report.author_username ? ` · by ${report.author_username}` : ""}
+              {STATUS_LABELS[report.status]}
+              {report.author_username ? ` · bildiren: ${report.author_username}` : ""}
             </small>
             <div
               style={{
@@ -67,7 +68,7 @@ export default function ReportMap({
               }}
             >
               <UpvoteButton report={report} onToggle={onToggleUpvote} />
-              <Link href={`/reports/${report.id}`}>Details &amp; comments</Link>
+              <Link href={`/reports/${report.id}`}>Detaylar ve yorumlar</Link>
             </div>
           </Popup>
         </Marker>
@@ -75,7 +76,7 @@ export default function ReportMap({
 
       {pending && (
         <Marker position={[pending.latitude, pending.longitude]} opacity={0.6}>
-          <Popup>New report here</Popup>
+          <Popup>Buraya yeni bildirim</Popup>
         </Marker>
       )}
     </MapContainer>

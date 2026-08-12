@@ -113,3 +113,6 @@ def test_upvote_on_a_missing_report_is_404(auth_client):
     response = auth_client.post("/api/reports/999999/upvote/")
 
     assert response.status_code == 404
+    # Guards against get_object_or_404's dynamically built message ("No Report matches
+    # the given query.") leaking through untranslated — see config/exceptions.py.
+    assert response.data["detail"] == "Bulunamadı."

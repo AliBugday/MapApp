@@ -30,7 +30,7 @@ export default function AuthPanel() {
       await action(username.trim(), password);
       setPassword("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");
+      setError(err instanceof ApiError ? err.message : "Bir şeyler ters gitti. Tekrar deneyin.");
     } finally {
       setSubmitting(false);
     }
@@ -39,14 +39,14 @@ export default function AuthPanel() {
   return (
     <form onSubmit={handleSubmit}>
       <h2 style={{ fontSize: "0.95rem", marginTop: 0 }}>
-        {registering ? "Create an account" : "Sign in"}
+        {registering ? "Hesap oluştur" : "Giriş yap"}
       </h2>
       <p style={{ color: "var(--muted)", fontSize: "0.78rem", marginTop: 0 }}>
-        You need an account to report an issue.
+        Sorun bildirmek için bir hesabınızın olması gerekir.
       </p>
 
       <label style={{ display: "block", marginBottom: "0.5rem" }}>
-        <span style={{ fontSize: "0.8rem" }}>Username</span>
+        <span style={{ fontSize: "0.8rem" }}>Kullanıcı adı</span>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -56,7 +56,7 @@ export default function AuthPanel() {
       </label>
 
       <label style={{ display: "block", marginBottom: "0.75rem" }}>
-        <span style={{ fontSize: "0.8rem" }}>Password</span>
+        <span style={{ fontSize: "0.8rem" }}>Şifre</span>
         <input
           type="password"
           value={password}
@@ -94,11 +94,11 @@ export default function AuthPanel() {
           width: "100%",
         }}
       >
-        {submitting ? "Working…" : registering ? "Create account" : "Sign in"}
+        {submitting ? "İşleniyor…" : registering ? "Hesap oluştur" : "Giriş yap"}
       </button>
 
       <p style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
-        {registering ? "Already have an account?" : "No account yet?"}{" "}
+        {registering ? "Zaten bir hesabınız var mı?" : "Hesabınız yok mu?"}{" "}
         <button
           type="button"
           onClick={() => {
@@ -113,7 +113,7 @@ export default function AuthPanel() {
             textDecoration: "underline",
           }}
         >
-          {registering ? "Sign in" : "Register"}
+          {registering ? "Giriş yap" : "Kayıt ol"}
         </button>
       </p>
     </form>

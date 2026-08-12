@@ -14,13 +14,13 @@ def parse_bbox(raw: str) -> Polygon:
     """Parse "minLng,minLat,maxLng,maxLat" into a polygon."""
     parts = raw.split(",")
     if len(parts) != 4:
-        raise ValidationError({"bbox": "Expected four comma-separated values."})
+        raise ValidationError({"bbox": "Virgülle ayrılmış dört değer bekleniyordu."})
     try:
         min_lng, min_lat, max_lng, max_lat = (float(p) for p in parts)
     except ValueError:
-        raise ValidationError({"bbox": "All four values must be numbers."}) from None
+        raise ValidationError({"bbox": "Dört değerin tümü sayı olmalıdır."}) from None
     if min_lng >= max_lng or min_lat >= max_lat:
-        raise ValidationError({"bbox": "Minimum values must be smaller than maximum values."})
+        raise ValidationError({"bbox": "Minimum değerler maksimum değerlerden küçük olmalıdır."})
     return Polygon.from_bbox((min_lng, min_lat, max_lng, max_lat))
 
 

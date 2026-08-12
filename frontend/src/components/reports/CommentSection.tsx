@@ -34,7 +34,7 @@ export default function CommentSection({ reportId }: { reportId: number }) {
       setComments((current) => [...(current ?? []), created]);
       setBody("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not post that comment.");
+      setError(err instanceof ApiError ? err.message : "Yorum gönderilemedi.");
     } finally {
       setSubmitting(false);
     }
@@ -42,13 +42,13 @@ export default function CommentSection({ reportId }: { reportId: number }) {
 
   return (
     <section style={{ marginTop: "2rem" }}>
-      <h2 style={{ fontSize: "1rem" }}>Comments{comments ? ` (${comments.length})` : ""}</h2>
+      <h2 style={{ fontSize: "1rem" }}>Yorumlar{comments ? ` (${comments.length})` : ""}</h2>
 
-      {comments === null && !error && <p style={{ color: "var(--muted)" }}>Loading comments…</p>}
+      {comments === null && !error && <p style={{ color: "var(--muted)" }}>Yorumlar yükleniyor…</p>}
 
       {comments?.length === 0 && (
         <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
-          No comments yet. Be the first to add one.
+          Henüz yorum yok. İlk yorumu siz yapın.
         </p>
       )}
 
@@ -88,7 +88,7 @@ export default function CommentSection({ reportId }: { reportId: number }) {
       {user ? (
         <form onSubmit={handleSubmit} style={{ marginTop: "1rem" }}>
           <label>
-            <span style={{ fontSize: "0.85rem" }}>Add a comment</span>
+            <span style={{ fontSize: "0.85rem" }}>Yorum ekle</span>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -109,12 +109,12 @@ export default function CommentSection({ reportId }: { reportId: number }) {
               marginTop: "0.5rem",
             }}
           >
-            {submitting ? "Posting…" : "Post comment"}
+            {submitting ? "Gönderiliyor…" : "Yorumu gönder"}
           </button>
         </form>
       ) : (
         <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "1rem" }}>
-          Sign in on the map page to join the discussion.
+          Tartışmaya katılmak için harita sayfasından giriş yapın.
         </p>
       )}
     </section>
