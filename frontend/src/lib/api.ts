@@ -7,8 +7,16 @@ export interface Report {
   longitude: number;
   author_username: string | null;
   upvote_count: number;
+  /** Whether the *current* user has upvoted; always present, false when anonymous. */
+  has_upvoted: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/** What the upvote endpoint returns, for reconciling an optimistic update. */
+export interface UpvoteState {
+  upvote_count: number;
+  has_upvoted: boolean;
 }
 
 export interface User {
@@ -114,6 +122,18 @@ export function login(input: { username: string; password: string }): Promise<Us
 
 export function logout(): Promise<void> {
   return apiFetch<void>("/api/auth/logout/", { method: "POST" });
+}
+
+/**
+ * Add or remove the current user's upvote.
+ *
+ * Both directions are idempotent server-side, so a retry after a failed request is
+ * safe and cannot double-count.
+ */
+export function setUpvote(reportId: number, upvoted: boolean): Promise<UpvoteState> {
+  return apiFetch<UpvoteState>(`/api/reports/${reportId}/upvote/`, {
+    method: upvoted ? "POST" : "DELETE",
+  });
 }
 
 export function fetchReports(): Promise<Paginated<Report>> {

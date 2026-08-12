@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { ApiError, createReport, fetchReports, type Report } from "@/lib/api";
+import { ApiError, createReport, fetchReports, setUpvote, type Report } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import AuthPanel from "@/components/auth/AuthPanel";
 import type { LatLng } from "./types";
@@ -48,6 +48,38 @@ export default function MapPanel() {
     [pending],
   );
 
+  const handleToggleUpvote = useCallback(
+    async (target: Pick<Report, "id" | "has_upvoted">) => {
+      if (!user) {
+        setError("Sign in to upvote — the form is in this sidebar.");
+        return;
+      }
+      const previous = reports.find((r) => r.id === target.id);
+      if (!previous) return;
+      const next = !previous.has_upvoted;
+
+      const patch = (changes: Partial<Report>) =>
+        setReports((current) =>
+          current.map((r) => (r.id === target.id ? { ...r, ...changes } : r)),
+        );
+
+      // Optimistic: the count moves immediately, because waiting on a round trip for a
+      // single tap feels broken. The server's own numbers are applied on success, which
+      // also picks up votes other people cast since this page loaded.
+      patch({ has_upvoted: next, upvote_count: previous.upvote_count + (next ? 1 : -1) });
+      try {
+        patch(await setUpvote(target.id, next));
+        setError(null);
+      } catch (err) {
+        // Roll back to what the server last told us, rather than leaving a count the
+        // database does not agree with.
+        patch({ has_upvoted: previous.has_upvoted, upvote_count: previous.upvote_count });
+        setError(err instanceof ApiError ? err.message : "Could not register that vote.");
+      }
+    },
+    [user, reports],
+  );
+
   const center = useMemo(() => reports[0] ?? ISTANBUL, [reports]);
 
   return (
@@ -57,6 +89,7 @@ export default function MapPanel() {
           reports={reports}
           pending={pending}
           onMapClick={setPending}
+          onToggleUpvote={handleToggleUpvote}
           center={center}
           zoom={13}
         />
