@@ -13,6 +13,13 @@ export interface Report {
   updated_at: string;
 }
 
+export interface Comment {
+  id: number;
+  body: string;
+  author_username: string;
+  created_at: string;
+}
+
 /** What the upvote endpoint returns, for reconciling an optimistic update. */
 export interface UpvoteState {
   upvote_count: number;
@@ -133,6 +140,22 @@ export function logout(): Promise<void> {
 export function setUpvote(reportId: number, upvoted: boolean): Promise<UpvoteState> {
   return apiFetch<UpvoteState>(`/api/reports/${reportId}/upvote/`, {
     method: upvoted ? "POST" : "DELETE",
+  });
+}
+
+export function fetchReport(reportId: number): Promise<Report> {
+  return apiFetch<Report>(`/api/reports/${reportId}/`);
+}
+
+/** A flat array, not a paginated envelope — see the comments action in views.py. */
+export function fetchComments(reportId: number): Promise<Comment[]> {
+  return apiFetch<Comment[]>(`/api/reports/${reportId}/comments/`);
+}
+
+export function createComment(reportId: number, body: string): Promise<Comment> {
+  return apiFetch<Comment>(`/api/reports/${reportId}/comments/`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
   });
 }
 

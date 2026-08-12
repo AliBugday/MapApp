@@ -7,6 +7,8 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
+import Link from "next/link";
+
 import UpvoteButton from "@/components/UpvoteButton";
 import type { LatLng, ReportMapProps } from "./types";
 
@@ -56,8 +58,16 @@ export default function ReportMap({
               {report.status}
               {report.author_username ? ` · by ${report.author_username}` : ""}
             </small>
-            <div style={{ marginTop: "0.5rem" }}>
+            <div
+              style={{
+                marginTop: "0.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+              }}
+            >
               <UpvoteButton report={report} onToggle={onToggleUpvote} />
+              <Link href={`/reports/${report.id}`}>Details &amp; comments</Link>
             </div>
           </Popup>
         </Marker>

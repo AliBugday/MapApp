@@ -1,0 +1,132 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+
+import { ApiError, fetchReport, setUpvote, type Report } from "@/lib/api";
+import { useUser } from "@/lib/auth";
+import AppHeader from "@/components/AppHeader";
+import UpvoteButton from "@/components/UpvoteButton";
+import CommentSection from "@/components/reports/CommentSection";
+
+const STATUS_LABELS: Record<Report["status"], string> = {
+  open: "Open",
+  in_progress: "In progress",
+  resolved: "Resolved",
+  rejected: "Rejected",
+};
+
+/**
+ * A client component, so it shares the UserProvider in the root layout and can reuse
+ * UpvoteButton directly. Server-rendering this for OpenGraph share tags is a later
+ * concern — sharing is not part of this step.
+ */
+export default function ReportDetailPage() {
+  const params = useParams<{ id: string }>();
+  const reportId = Number(params.id);
+  const { user } = useUser();
+
+  const [report, setReport] = useState<Report | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!Number.isInteger(reportId)) {
+      setError("That report id is not valid.");
+      setLoading(false);
+      return;
+    }
+    fetchReport(reportId)
+      .then(setReport)
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [reportId]);
+
+  const handleToggleUpvote = useCallback(async () => {
+    if (!report) return;
+    if (!user) {
+      setError("Sign in on the map page to upvote.");
+      return;
+    }
+    const previous = report;
+    const next = !previous.has_upvoted;
+
+    // Same optimistic-then-reconcile approach as the map, on a single report rather than
+    // a list: move the count now, apply the server's numbers when they arrive.
+    setReport({
+      ...previous,
+      has_upvoted: next,
+      upvote_count: previous.upvote_count + (next ? 1 : -1),
+    });
+    try {
+      const confirmed = await setUpvote(previous.id, next);
+      setReport((current) => (current ? { ...current, ...confirmed } : current));
+      setError(null);
+    } catch (err) {
+      setReport(previous);
+      setError(err instanceof ApiError ? err.message : "Could not register that vote.");
+    }
+  }, [report, user]);
+
+  return (
+    <main style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <AppHeader />
+
+      <div style={{ padding: "1.5rem", maxWidth: 680, width: "100%", margin: "0 auto" }}>
+        <Link href="/" style={{ fontSize: "0.85rem" }}>
+          ← Back to the map
+        </Link>
+
+        {loading && <p style={{ color: "var(--muted)" }}>Loading report…</p>}
+
+        {error && !report && (
+          <p
+            role="alert"
+            style={{
+              background: "#fdecea",
+              border: "1px solid #f5c2bd",
+              borderRadius: 4,
+              padding: "0.6rem",
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        {report && (
+          <>
+            <h1 style={{ marginBottom: "0.25rem" }}>{report.title}</h1>
+            <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginTop: 0 }}>
+              {STATUS_LABELS[report.status]}
+              {report.author_username ? ` · reported by ${report.author_username}` : ""} ·{" "}
+              {new Date(report.created_at).toLocaleDateString()}
+            </p>
+
+            {report.description ? (
+              <p style={{ whiteSpace: "pre-wrap" }}>{report.description}</p>
+            ) : (
+              <p style={{ color: "var(--muted)", fontStyle: "italic" }}>No description given.</p>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <UpvoteButton report={report} onToggle={handleToggleUpvote} />
+              <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
+                {report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}
+              </span>
+            </div>
+
+            {/* An upvote error belongs next to the button, not above the title. */}
+            {error && (
+              <p role="alert" style={{ color: "#b3261e", fontSize: "0.85rem" }}>
+                {error}
+              </p>
+            )}
+
+            <CommentSection reportId={report.id} />
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
