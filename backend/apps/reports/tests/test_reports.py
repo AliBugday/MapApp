@@ -1,37 +1,10 @@
 import pytest
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
-from rest_framework.test import APIClient
 
-from apps.accounts.models import User
 from apps.reports.models import Report
 
-# Istanbul, roughly Sultanahmet.
-ISTANBUL = {"latitude": 41.0082, "longitude": 28.9784}
-
-
-@pytest.fixture
-def user(db):
-    return User.objects.create_user(username="tester", password="pw12345678")
-
-
-@pytest.fixture
-def client():
-    return APIClient()
-
-
-@pytest.fixture
-def auth_client(client, user):
-    client.force_authenticate(user=user)
-    return client
-
-
-def create_report(**kwargs):
-    defaults = {
-        "title": "Broken streetlight",
-        "location": Point(ISTANBUL["longitude"], ISTANBUL["latitude"], srid=4326),
-    }
-    return Report.objects.create(**{**defaults, **kwargs})
+from .factories import ISTANBUL, create_report
 
 
 @pytest.mark.django_db

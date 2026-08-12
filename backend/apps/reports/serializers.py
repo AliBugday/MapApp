@@ -15,6 +15,7 @@ class ReportSerializer(serializers.ModelSerializer):
     longitude = serializers.FloatField(min_value=-180, max_value=180, write_only=True)
     author_username = serializers.CharField(source="author.username", read_only=True)
     upvote_count = serializers.SerializerMethodField()
+    has_upvoted = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -27,6 +28,7 @@ class ReportSerializer(serializers.ModelSerializer):
             "longitude",
             "author_username",
             "upvote_count",
+            "has_upvoted",
             "created_at",
             "updated_at",
         ]
@@ -35,6 +37,10 @@ class ReportSerializer(serializers.ModelSerializer):
     def get_upvote_count(self, obj) -> int:
         # Annotated by the viewset on list/retrieve; absent on a just-created instance.
         return getattr(obj, "upvote_count", 0)
+
+    def get_has_upvoted(self, obj) -> bool:
+        # Same as above: a brand-new report has no annotation, and nobody has upvoted it.
+        return bool(getattr(obj, "has_upvoted", False))
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
