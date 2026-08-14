@@ -6,7 +6,9 @@ import dynamic from "next/dynamic";
 import { ApiError, createReport, fetchReports, setUpvote, type Report } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { STATUS_LABELS } from "@/lib/statusLabels";
+import { TYPE_LABELS } from "@/lib/typeLabels";
 import AuthPanel from "@/components/auth/AuthPanel";
+import MapLegend from "./MapLegend";
 import type { LatLng } from "./types";
 import NewReportForm from "./NewReportForm";
 
@@ -40,7 +42,12 @@ export default function MapPanel() {
   }, [userLoading, user?.id]);
 
   const handleCreate = useCallback(
-    async (input: { title: string; description: string }) => {
+    async (input: {
+      title: string;
+      description: string;
+      type: Report["type"];
+      visibility?: Report["visibility"];
+    }) => {
       if (!pending) return;
       try {
         const created = await createReport({ ...input, ...pending });
@@ -100,6 +107,7 @@ export default function MapPanel() {
           center={center}
           zoom={13}
         />
+        <MapLegend />
       </div>
 
       <aside
@@ -154,8 +162,8 @@ export default function MapPanel() {
             >
               <strong style={{ fontSize: "0.9rem" }}>{report.title}</strong>
               <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
-                {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)} ·{" "}
-                {STATUS_LABELS[report.status]}
+                {TYPE_LABELS[report.type]} · {STATUS_LABELS[report.status]} · ▲{" "}
+                {report.upvote_count}
               </div>
             </li>
           ))}

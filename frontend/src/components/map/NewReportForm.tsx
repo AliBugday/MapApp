@@ -2,27 +2,51 @@
 
 import { useState } from "react";
 
+import type { Report } from "@/lib/api";
+import { ORG_ONLY_TYPES, TYPE_LABELS } from "@/lib/typeLabels";
+import { useUser } from "@/lib/auth";
 import type { LatLng } from "./types";
 
 interface Props {
   position: LatLng;
-  onSubmit: (input: { title: string; description: string }) => Promise<void>;
+  onSubmit: (input: {
+    title: string;
+    description: string;
+    type: Report["type"];
+    visibility?: Report["visibility"];
+  }) => Promise<void>;
   onCancel: () => void;
 }
 
+const TYPES = Object.keys(TYPE_LABELS) as Array<Report["type"]>;
+
 export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
+  const { user } = useUser();
+  const canPostOrgOnly = Boolean(user?.organization_name);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [type, setType] = useState<Report["type"]>("issue");
+  const [visibility, setVisibility] = useState<Report["visibility"]>("public");
   const [saving, setSaving] = useState(false);
+
+  const showVisibility = ORG_ONLY_TYPES.has(type);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
     try {
-      await onSubmit({ title: title.trim(), description: description.trim() });
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim(),
+        type,
+        visibility: showVisibility ? visibility : undefined,
+      });
       setTitle("");
       setDescription("");
+      setType("issue");
+      setVisibility("public");
     } finally {
       setSaving(false);
     }
@@ -44,6 +68,46 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
         <span style={{ fontSize: "0.8rem" }}>Açıklama</span>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </label>
+
+      <label style={{ display: "block", marginBottom: "0.75rem" }}>
+        <span style={{ fontSize: "0.8rem" }}>Tür</span>
+        <select value={type} onChange={(e) => setType(e.target.value as Report["type"])}>
+          {TYPES.map((t) => (
+            <option key={t} value={t} disabled={ORG_ONLY_TYPES.has(t) && !canPostOrgOnly}>
+              {TYPE_LABELS[t]}
+              {ORG_ONLY_TYPES.has(t) && !canPostOrgOnly ? " (yalnızca kurum hesapları)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {showVisibility && (
+        <fieldset
+          style={{ border: "1px solid var(--border)", borderRadius: 4, marginBottom: "0.75rem" }}
+        >
+          <legend style={{ fontSize: "0.8rem", padding: "0 0.3rem" }}>Görünürlük</legend>
+          <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" }}>
+            <input
+              type="radio"
+              name="visibility"
+              checked={visibility === "public"}
+              onChange={() => setVisibility("public")}
+              style={{ width: "auto", marginRight: "0.4rem" }}
+            />
+            Herkese açık
+          </label>
+          <label style={{ display: "block", fontSize: "0.85rem" }}>
+            <input
+              type="radio"
+              name="visibility"
+              checked={visibility === "members"}
+              onChange={() => setVisibility("members")}
+              style={{ width: "auto", marginRight: "0.4rem" }}
+            />
+            Yalnızca üyelere
+          </label>
+        </fieldset>
+      )}
 
       <div style={{ display: "flex", gap: "0.5rem" }}>
         <button

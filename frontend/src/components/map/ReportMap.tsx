@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -11,6 +11,8 @@ import Link from "next/link";
 
 import UpvoteButton from "@/components/UpvoteButton";
 import { STATUS_LABELS } from "@/lib/statusLabels";
+import { TYPE_LABELS } from "@/lib/typeLabels";
+import { iconFor } from "./markerIcon";
 import type { LatLng, ReportMapProps } from "./types";
 
 // Leaflet resolves its default icons with relative URLs that break under a bundler,
@@ -51,12 +53,37 @@ export default function ReportMap({
       <ClickHandler onMapClick={onMapClick} />
 
       {reports.map((report) => (
-        <Marker key={report.id} position={[report.latitude, report.longitude]}>
+        <Marker
+          key={report.id}
+          position={[report.latitude, report.longitude]}
+          icon={iconFor({
+            type: report.type,
+            status: report.status,
+            visibility: report.visibility,
+            upvote_count: report.upvote_count,
+            comment_count: report.comment_count,
+          })}
+        >
+          <Tooltip direction="top" offset={[0, -6]}>
+            <strong>{report.title}</strong>
+            <div>
+              {TYPE_LABELS[report.type]}
+              {report.type === "issue" || report.type === "request"
+                ? ` · ${STATUS_LABELS[report.status]}`
+                : report.visibility === "members"
+                  ? " · Yalnızca üyelere"
+                  : ""}
+            </div>
+            {report.organization_name && <div>{report.organization_name}</div>}
+            <div>
+              ▲ {report.upvote_count} · 💬 {report.comment_count}
+            </div>
+          </Tooltip>
           <Popup>
             <strong>{report.title}</strong>
             {report.description && <p style={{ margin: "0.25rem 0" }}>{report.description}</p>}
             <small>
-              {STATUS_LABELS[report.status]}
+              {TYPE_LABELS[report.type]} · {STATUS_LABELS[report.status]}
               {report.author_username ? ` · bildiren: ${report.author_username}` : ""}
             </small>
             <div
