@@ -14,8 +14,25 @@ class Report(models.Model):
         RESOLVED = "resolved", "Çözüldü"
         REJECTED = "rejected", "Reddedildi"
 
+    class Type(models.TextChoices):
+        ISSUE = "issue", "Sorun / Şikayet"
+        REQUEST = "request", "Talep"
+        ANNOUNCEMENT = "announcement", "Duyuru"
+        EVENT = "event", "Etkinlik"
+
+    class Visibility(models.TextChoices):
+        PUBLIC = "public", "Herkese açık"
+        MEMBERS = "members", "Yalnızca üyelere"
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    type = models.CharField(max_length=20, choices=Type.choices, default=Type.ISSUE)
+    # Only meaningful for announcement/event; enforced in ReportSerializer.validate() rather
+    # than here so the rule can name the offending field in a 400 instead of failing a
+    # database constraint.
+    visibility = models.CharField(
+        max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC
+    )
 
     # geography=True so distance lookups are in metres on a sphere. With a plain
     # geometry column at SRID 4326, distances come back in degrees, which makes

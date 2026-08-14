@@ -10,6 +10,8 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 
+from .factories import create_organization
+
 PASSWORD = "pw12345678"
 
 
@@ -25,6 +27,22 @@ def other_user(db):
 
 
 @pytest.fixture
+def org_user(db):
+    """A member of an organization — can post announcement/event reports."""
+    org = create_organization(name="Kadıköy Belediyesi")
+    return User.objects.create_user(username="org-member", password=PASSWORD, organization=org)
+
+
+@pytest.fixture
+def other_org_user(db):
+    """A member of a *different* organization — what makes the visibility tests meaningful."""
+    org = create_organization(name="Üsküdar Belediyesi")
+    return User.objects.create_user(
+        username="other-org-member", password=PASSWORD, organization=org
+    )
+
+
+@pytest.fixture
 def client():
     return APIClient()
 
@@ -32,4 +50,18 @@ def client():
 @pytest.fixture
 def auth_client(client, user):
     client.force_authenticate(user=user)
+    return client
+
+
+@pytest.fixture
+def org_client(org_user):
+    client = APIClient()
+    client.force_authenticate(user=org_user)
+    return client
+
+
+@pytest.fixture
+def other_org_client(other_org_user):
+    client = APIClient()
+    client.force_authenticate(user=other_org_user)
     return client

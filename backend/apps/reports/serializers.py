@@ -22,10 +22,18 @@ class ReportSerializer(serializers.ModelSerializer):
     maps directly onto what Leaflet expects.
     """
 
+    # A report is only ever hidden from the public because an organization chose to hide
+    # it, and only announcement/event support that — see validate() below.
+    ORG_ONLY_TYPES = {Report.Type.ANNOUNCEMENT, Report.Type.EVENT}
+
     latitude = serializers.FloatField(min_value=-90, max_value=90, write_only=True)
     longitude = serializers.FloatField(min_value=-180, max_value=180, write_only=True)
     author_username = serializers.CharField(source="author.username", read_only=True)
+    organization_name = serializers.CharField(
+        source="author.organization.name", read_only=True, allow_null=True
+    )
     upvote_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
     has_upvoted = serializers.SerializerMethodField()
 
     class Meta:
@@ -35,10 +43,14 @@ class ReportSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "status",
+            "type",
+            "visibility",
             "latitude",
             "longitude",
             "author_username",
+            "organization_name",
             "upvote_count",
+            "comment_count",
             "has_upvoted",
             "created_at",
             "updated_at",
@@ -49,9 +61,29 @@ class ReportSerializer(serializers.ModelSerializer):
         # Annotated by the viewset on list/retrieve; absent on a just-created instance.
         return getattr(obj, "upvote_count", 0)
 
+    def get_comment_count(self, obj) -> int:
+        return getattr(obj, "comment_count", 0)
+
     def get_has_upvoted(self, obj) -> bool:
         # Same as above: a brand-new report has no annotation, and nobody has upvoted it.
         return bool(getattr(obj, "has_upvoted", False))
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        report_type = attrs.get("type", Report.Type.ISSUE)
+        visibility = attrs.get("visibility", Report.Visibility.PUBLIC)
+
+        if report_type in self.ORG_ONLY_TYPES and not getattr(user, "organization_id", None):
+            raise serializers.ValidationError(
+                {"type": "Duyuru ve etkinlik yalnızca kurum hesapları tarafından oluşturulabilir."}
+            )
+        # "Members only" has no meaning without an organization to be a member of, and
+        # hiding a civic complaint from the public defeats the point of reporting it.
+        if visibility == Report.Visibility.MEMBERS and report_type not in self.ORG_ONLY_TYPES:
+            raise serializers.ValidationError(
+                {"visibility": "Yalnızca duyuru ve etkinlikler üyelere özel olabilir."}
+            )
+        return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
