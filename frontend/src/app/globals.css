@@ -43,18 +43,32 @@ textarea {
   height: 100%;
 }
 
-.pin {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
+/* The classic CSS "map pin" shape: a square, three corners rounded, one left sharp, then
+   rotated -45deg — the sharp corner becomes a tail pointing straight down at the exact
+   coordinate. Width/height are set inline per marker (the size tiers), not here. */
+.pin-drop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50% 50% 50% 0;
   border-width: 3px;
   border-style: solid;
   background: #fff;
+  overflow: hidden;
+  transform: rotate(-45deg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Counter-rotated so the photo/glyph inside renders upright despite .pin-drop's rotation —
+   the two rotations cancel visually while the content still gets clipped to the parent's
+   circle-with-tail outline, which is what makes a photo appear to continue into the tail. */
+.pin-drop-inner {
+  width: 100%;
+  height: 100%;
+  transform: rotate(45deg);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .pin-resolved {
@@ -77,18 +91,20 @@ textarea {
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #1b1f24;
-  color: #fff;
+  background: #fff;
+  color: #1b1f24;
   font-size: 10px;
   line-height: 1;
   padding: 2px 5px;
   border-radius: 999px;
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .pin-corner {
   position: absolute;
-  bottom: -3px;
+  /* top is set inline per marker (markerIcon.ts) — it depends on the head size, which the
+     wrapper's own height no longer matches now that the wrapper includes the tail. */
   left: -3px;
   width: 16px;
   height: 16px;
