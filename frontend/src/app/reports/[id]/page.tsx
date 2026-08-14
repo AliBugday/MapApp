@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, fetchReport, setUpvote, type Report } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { STATUS_LABELS } from "@/lib/statusLabels";
+import { TYPE_LABELS } from "@/lib/typeLabels";
 import AppHeader from "@/components/AppHeader";
 import UpvoteButton from "@/components/UpvoteButton";
 import CommentSection from "@/components/reports/CommentSection";
@@ -96,7 +97,13 @@ export default function ReportDetailPage() {
           <>
             <h1 style={{ marginBottom: "0.25rem" }}>{report.title}</h1>
             <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginTop: 0 }}>
-              {STATUS_LABELS[report.status]}
+              {TYPE_LABELS[report.type]}
+              {report.type === "issue" || report.type === "request"
+                ? ` · ${STATUS_LABELS[report.status]}`
+                : report.visibility === "members"
+                  ? " · Yalnızca üyelere"
+                  : " · Herkese açık"}
+              {report.organization_name ? ` · ${report.organization_name}` : ""}
               {report.author_username ? ` · bildiren: ${report.author_username}` : ""} ·{" "}
               {new Date(report.created_at).toLocaleDateString()}
             </p>

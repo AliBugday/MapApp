@@ -1,5 +1,5 @@
 from django.contrib.gis.geos import Polygon
-from django.db.models import BooleanField, Count, Exists, OuterRef, Value
+from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -36,9 +36,17 @@ class ReportViewSet(
     def get_queryset(self):
         # Explicit order_by, not just Meta.ordering: annotate() adds a GROUP BY, which
         # makes Django report the queryset as unordered and gives DRF unstable pagination.
+        #
+        # distinct=True on BOTH counts is required, not optional: annotating two Count()s
+        # over different reverse FKs (upvotes and comments) in one queryset joins both
+        # tables at once, producing a cartesian product — a report with 3 upvotes and 4
+        # comments would otherwise report 12 of each.
         queryset = (
-            Report.objects.select_related("author")
-            .annotate(upvote_count=Count("upvotes"))
+            Report.objects.select_related("author__organization")
+            .annotate(
+                upvote_count=Count("upvotes", distinct=True),
+                comment_count=Count("comments", distinct=True),
+            )
             .order_by("-created_at")
         )
 
@@ -53,6 +61,19 @@ class ReportViewSet(
             # Annotated as a constant so the field is always present in the response,
             # rather than the shape changing depending on who is asking.
             queryset = queryset.annotate(has_upvoted=Value(False, output_field=BooleanField()))
+
+        # A members-only report is visible to anonymous/other users nowhere at all — not
+        # in the list, and not via retrieve/upvote/comments either, since all three
+        # resolve through get_object() -> this same queryset. That makes a non-member's
+        # request 404, never 403: a 403 would confirm a hidden report exists at that id.
+        if not user.is_staff:
+            visible = Q(visibility=Report.Visibility.PUBLIC)
+            if user.is_authenticated and user.organization_id:
+                visible |= Q(
+                    visibility=Report.Visibility.MEMBERS,
+                    author__organization_id=user.organization_id,
+                )
+            queryset = queryset.filter(visible)
 
         bbox = self.request.query_params.get("bbox")
         if bbox:

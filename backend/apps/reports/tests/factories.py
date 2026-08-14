@@ -6,6 +6,7 @@ function, not fixtures — importing them explicitly is clearer than pytest inje
 
 from django.contrib.gis.geos import Point
 
+from apps.accounts.models import Organization
 from apps.reports.models import Report
 
 # Istanbul, roughly Sultanahmet.
@@ -18,3 +19,8 @@ def create_report(**kwargs):
         "location": Point(ISTANBUL["longitude"], ISTANBUL["latitude"], srid=4326),
     }
     return Report.objects.create(**{**defaults, **kwargs})
+
+
+def create_organization(**kwargs):
+    defaults = {"name": "Test Belediyesi", "kind": Organization.Kind.MUNICIPALITY}
+    return Organization.objects.create(**{**defaults, **kwargs})

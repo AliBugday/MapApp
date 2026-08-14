@@ -3,10 +3,14 @@ export interface Report {
   title: string;
   description: string;
   status: "open" | "in_progress" | "resolved" | "rejected";
+  type: "issue" | "request" | "announcement" | "event";
+  visibility: "public" | "members";
   latitude: number;
   longitude: number;
   author_username: string | null;
+  organization_name: string | null;
   upvote_count: number;
+  comment_count: number;
   /** Whether the *current* user has upvoted; always present, false when anonymous. */
   has_upvoted: boolean;
   created_at: string;
@@ -30,6 +34,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  organization_name: string | null;
 }
 
 export interface Paginated<T> {
@@ -92,6 +97,8 @@ const FIELD_LABELS: Record<string, string> = {
   title: "Başlık",
   description: "Açıklama",
   body: "Yorum",
+  type: "Tür",
+  visibility: "Görünürlük",
 };
 
 async function describeError(response: Response): Promise<string> {
@@ -179,6 +186,8 @@ export function fetchReports(): Promise<Paginated<Report>> {
 export function createReport(input: {
   title: string;
   description: string;
+  type: Report["type"];
+  visibility?: Report["visibility"];
   latitude: number;
   longitude: number;
 }): Promise<Report> {

@@ -7,9 +7,13 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     """The single shape a user is exposed as, shared by all four auth endpoints."""
 
+    organization_name = serializers.CharField(
+        source="organization.name", read_only=True, allow_null=True
+    )
+
     class Meta:
         model = User
-        fields = ["id", "username", "email"]
+        fields = ["id", "username", "email", "organization_name"]
         read_only_fields = fields
 
 
