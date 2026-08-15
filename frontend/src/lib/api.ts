@@ -1,3 +1,9 @@
+export interface ReportImage {
+  id: number;
+  url: string;
+  thumbnail_url: string;
+}
+
 export interface Report {
   id: number;
   title: string;
@@ -13,6 +19,7 @@ export interface Report {
   comment_count: number;
   /** Whether the *current* user has upvoted; always present, false when anonymous. */
   has_upvoted: boolean;
+  images: ReportImage[];
   created_at: string;
   updated_at: string;
 }
@@ -72,7 +79,9 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   const method = (options.method ?? "GET").toUpperCase();
   const headers = new Headers(options.headers);
 
-  if (options.body && !headers.has("Content-Type")) {
+  // FormData (image uploads) must NOT get a Content-Type set here — fetch sets its own,
+  // including the multipart boundary, only when the header is left unset.
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (!SAFE_METHODS.has(method)) {
@@ -99,6 +108,7 @@ const FIELD_LABELS: Record<string, string> = {
   body: "Yorum",
   type: "Tür",
   visibility: "Görünürlük",
+  image: "Görsel",
 };
 
 async function describeError(response: Response): Promise<string> {
@@ -192,4 +202,19 @@ export function createReport(input: {
   longitude: number;
 }): Promise<Report> {
   return apiFetch<Report>("/api/reports/", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** A separate request from createReport() — mixing JSON and multipart in one payload
+ * complicates both, and the report needs to exist before an image can attach to it. */
+export function uploadReportImage(reportId: number, file: File): Promise<ReportImage> {
+  const body = new FormData();
+  body.append("image", file);
+  return apiFetch<ReportImage>(`/api/reports/${reportId}/images/`, { method: "POST", body });
+}
+
+export function updateReportStatus(reportId: number, status: Report["status"]): Promise<Report> {
+  return apiFetch<Report>(`/api/reports/${reportId}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }

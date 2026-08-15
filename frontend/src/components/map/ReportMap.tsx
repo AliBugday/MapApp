@@ -7,6 +7,7 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import UpvoteButton from "@/components/UpvoteButton";
@@ -62,6 +63,7 @@ export default function ReportMap({
             visibility: report.visibility,
             upvote_count: report.upvote_count,
             comment_count: report.comment_count,
+            thumbnailUrl: report.images[0]?.thumbnail_url,
           })}
         >
           <Tooltip direction="top" offset={[0, -6]}>
@@ -78,6 +80,29 @@ export default function ReportMap({
             <div>
               ▲ {report.upvote_count} · 💬 {report.comment_count}
             </div>
+            {report.images.length > 0 && (
+              // Up to 4 photos: 1–3 lay out in a single row, 4 wraps into a 2×2 grid —
+              // both fall out of the same "2 columns once there are 4" grid rule.
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${Math.min(report.images.length, 4) === 4 ? 2 : Math.min(report.images.length, 4)}, auto)`,
+                  gap: "0.2rem",
+                  marginTop: "0.3rem",
+                }}
+              >
+                {report.images.slice(0, 4).map((image) => (
+                  <Image
+                    key={image.id}
+                    src={image.thumbnail_url}
+                    alt=""
+                    width={96}
+                    height={96}
+                    style={{ objectFit: "cover", borderRadius: 4 }}
+                  />
+                ))}
+              </div>
+            )}
           </Tooltip>
           <Popup>
             <strong>{report.title}</strong>

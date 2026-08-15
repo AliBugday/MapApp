@@ -14,6 +14,7 @@ interface Props {
     description: string;
     type: Report["type"];
     visibility?: Report["visibility"];
+    images: File[];
   }) => Promise<void>;
   onCancel: () => void;
 }
@@ -28,9 +29,26 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
   const [description, setDescription] = useState("");
   const [type, setType] = useState<Report["type"]>("issue");
   const [visibility, setVisibility] = useState<Report["visibility"]>("public");
+  const [images, setImages] = useState<File[]>([]);
+  // <input type="file"> is uncontrolled and, more importantly, replaces its FileList on
+  // every dialog open rather than adding to it — reopening the picker to add a second
+  // photo would otherwise wipe out the first. Bumping this key remounts the input after
+  // every pick (not just on submit), so `images` in state is the only accumulator and the
+  // native element never carries a stale selection forward.
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const showVisibility = ORG_ONLY_TYPES.has(type);
+
+  function handleFilesSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(event.target.files ?? []);
+    setImages((current) => [...current, ...picked]);
+    setFileInputKey((key) => key + 1);
+  }
+
+  function removeImage(index: number) {
+    setImages((current) => current.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -42,11 +60,14 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
         description: description.trim(),
         type,
         visibility: showVisibility ? visibility : undefined,
+        images,
       });
       setTitle("");
       setDescription("");
       setType("issue");
       setVisibility("public");
+      setImages([]);
+      setFileInputKey((key) => key + 1);
     } finally {
       setSaving(false);
     }
@@ -107,6 +128,63 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
             Yalnızca üyelere
           </label>
         </fieldset>
+      )}
+
+      <label style={{ display: "block", marginBottom: "0.5rem" }}>
+        <span style={{ fontSize: "0.8rem" }}>Fotoğraflar (isteğe bağlı)</span>
+        <input
+          key={fileInputKey}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFilesSelected}
+        />
+      </label>
+
+      {images.length > 0 && (
+        <ul
+          style={{
+            listStyle: "none",
+            padding: 0,
+            margin: "0 0 0.75rem",
+            fontSize: "0.8rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.2rem",
+          }}
+        >
+          {images.map((file, index) => (
+            <li
+              key={`${file.name}-${index}`}
+              style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <span
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  flex: 1,
+                }}
+              >
+                {file.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeImage(index)}
+                aria-label={`${file.name} kaldır`}
+                style={{
+                  background: "transparent",
+                  border: 0,
+                  color: "var(--muted)",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
       <div style={{ display: "flex", gap: "0.5rem" }}>

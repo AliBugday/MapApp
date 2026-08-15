@@ -1,6 +1,11 @@
+import io
+from pathlib import Path
+
 from django.conf import settings
 from django.contrib.gis.db import models as gis_models
+from django.core.files.base import ContentFile
 from django.db import models
+from PIL import Image, ImageOps
 
 
 class Report(models.Model):
@@ -98,9 +103,41 @@ class Upvote(models.Model):
 class ReportImage(models.Model):
     """Separate model so a report can carry several photos later without a migration."""
 
+    THUMBNAIL_SIZE = (128, 128)
+
     report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="reports/%Y/%m/")
+    # Generated from `image` in save(), never accepted from the client. A phone photo is
+    # commonly several MB; a map with dozens of pins each pulling in a full-size original
+    # would make the page hang loading them. 128px covers both the pin (46px at 2x) and the
+    # hover-card thumbnails, so this one derivative serves both.
+    thumbnail = models.ImageField(upload_to="reports/thumbs/%Y/%m/", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Image for report {self.report_id}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        # `image` must be committed to storage before it can be reopened for thumbnailing,
+        # so a first-time save writes the row twice: once for the upload, once for the
+        # derived thumbnail.
+        super().save(*args, **kwargs)
+        if is_new and not self.thumbnail:
+            filename = f"{Path(self.image.name).stem}_thumb.jpg"
+            self.thumbnail.save(filename, self._make_thumbnail(), save=False)
+            super().save(update_fields=["thumbnail"])
+
+    def _make_thumbnail(self) -> ContentFile:
+        self.image.open("rb")
+        try:
+            with Image.open(self.image) as source:
+                # Phone cameras store rotation as EXIF metadata, not in the pixel data —
+                # without this, thumbnails of portrait photos come out sideways.
+                photo = ImageOps.exif_transpose(source).convert("RGB")
+                photo = ImageOps.fit(photo, self.THUMBNAIL_SIZE, Image.LANCZOS)
+                buffer = io.BytesIO()
+                photo.save(buffer, format="JPEG", quality=80)
+        finally:
+            self.image.close()
+        return ContentFile(buffer.getvalue())

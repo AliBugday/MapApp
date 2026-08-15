@@ -4,6 +4,11 @@ import type { NextConfig } from "next";
 const backendUrl = process.env.BACKEND_INTERNAL_URL ?? "http://backend:8000";
 
 const nextConfig: NextConfig = {
+  // Report photos are served from Django's /media/ proxy, already same-origin and already
+  // cheap (thumbnails are pre-generated server-side) — the optimizer would only add a
+  // round trip through the proxy for no benefit.
+  images: { unoptimized: true },
+
   // Django/DRF requires a trailing slash on every URL-conf route; Next's default
   // trailing-slash redirect would strip it before the rewrite below ever runs, and
   // even with that redirect disabled, the :path* wildcard drops a trailing slash when
