@@ -42,7 +42,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.accounts",
     "apps.reports",
+    "apps.notifications",
 ]
+
+# How close a user's home/work location must be to a newly created report (any type)
+# to get notified about it. Env-overridable, not hardcoded in
+# apps/notifications/services.py, so it can be tuned without a code change.
+NEARBY_NOTIFICATION_RADIUS_KM = float(env("NEARBY_NOTIFICATION_RADIUS_KM", "5"))
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

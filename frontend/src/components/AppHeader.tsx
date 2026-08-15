@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { useUser } from "@/lib/auth";
+import NotificationBell from "@/components/NotificationBell";
 
 /**
  * Split out of page.tsx as a client component: it is the only part of the page that
@@ -39,6 +40,8 @@ export default function AppHeader() {
       </span>
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <NotificationBell />
+
         {/* Collapsed by default so the map/sidebar stay uncluttered — this is a profile
             setting, not something needed on every page load. */}
         {user && (
