@@ -2,7 +2,7 @@ import pytest
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 
-from apps.reports.models import Comment, Report, Upvote
+from apps.reports.models import Comment, EventRSVP, Report, Upvote
 
 from .factories import ISTANBUL, create_report
 
@@ -85,22 +85,25 @@ def test_malformed_bbox_is_rejected(client, bbox):
 
 
 @pytest.mark.django_db
-def test_upvote_count_and_comment_count_do_not_multiply_each_other(client, user, other_user):
-    """Regression test for annotating two Count()s over different reverse FKs at once.
+def test_upvote_comment_and_rsvp_counts_do_not_multiply_each_other(client, user, other_user):
+    """Regression test for annotating three Count()s over different reverse FKs at once.
 
-    Without distinct=True on both, the join through upvotes and comments produces a
-    cartesian product: 2 upvotes x 3 comments would report 6 of each, not 2 and 3.
+    Without distinct=True on all three, the join through upvotes, comments and rsvps
+    produces a cartesian product: 2 upvotes x 3 comments x 1 rsvp would report inflated,
+    mutually-multiplied totals rather than 2, 3 and 1.
     """
     report = create_report()
     Upvote.objects.create(report=report, user=user)
     Upvote.objects.create(report=report, user=other_user)
     for i in range(3):
         Comment.objects.create(report=report, author=user, body=f"Comment {i}")
+    EventRSVP.objects.create(report=report, user=user)
 
     response = client.get(f"/api/reports/{report.id}/")
 
     assert response.data["upvote_count"] == 2
     assert response.data["comment_count"] == 3
+    assert response.data["rsvp_count"] == 1
 
 
 @pytest.mark.django_db

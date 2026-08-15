@@ -64,6 +64,8 @@ class ReportSerializer(serializers.ModelSerializer):
     upvote_count = serializers.SerializerMethodField()
     comment_count = serializers.SerializerMethodField()
     has_upvoted = serializers.SerializerMethodField()
+    rsvp_count = serializers.SerializerMethodField()
+    has_rsvped = serializers.SerializerMethodField()
     images = ReportImageSerializer(many=True, read_only=True)
 
     class Meta:
@@ -75,6 +77,8 @@ class ReportSerializer(serializers.ModelSerializer):
             "status",
             "type",
             "visibility",
+            "event_starts_at",
+            "event_ends_at",
             "latitude",
             "longitude",
             "author_username",
@@ -82,6 +86,8 @@ class ReportSerializer(serializers.ModelSerializer):
             "upvote_count",
             "comment_count",
             "has_upvoted",
+            "rsvp_count",
+            "has_rsvped",
             "images",
             "created_at",
             "updated_at",
@@ -99,6 +105,12 @@ class ReportSerializer(serializers.ModelSerializer):
         # Same as above: a brand-new report has no annotation, and nobody has upvoted it.
         return bool(getattr(obj, "has_upvoted", False))
 
+    def get_rsvp_count(self, obj) -> int:
+        return getattr(obj, "rsvp_count", 0)
+
+    def get_has_rsvped(self, obj) -> bool:
+        return bool(getattr(obj, "has_rsvped", False))
+
     def validate(self, attrs):
         user = self.context["request"].user
         report_type = attrs.get("type", Report.Type.ISSUE)
@@ -113,6 +125,22 @@ class ReportSerializer(serializers.ModelSerializer):
         if visibility == Report.Visibility.MEMBERS and report_type not in self.ORG_ONLY_TYPES:
             raise serializers.ValidationError(
                 {"visibility": "Yalnızca duyuru ve etkinlikler üyelere özel olabilir."}
+            )
+
+        starts_at = attrs.get("event_starts_at")
+        ends_at = attrs.get("event_ends_at")
+        if report_type == Report.Type.EVENT:
+            if starts_at is None or ends_at is None:
+                raise serializers.ValidationError(
+                    {"event_starts_at": "Etkinlik için başlangıç ve bitiş zamanı gereklidir."}
+                )
+            if ends_at <= starts_at:
+                raise serializers.ValidationError(
+                    {"event_ends_at": "Bitiş zamanı başlangıçtan sonra olmalıdır."}
+                )
+        elif starts_at is not None or ends_at is not None:
+            raise serializers.ValidationError(
+                {"event_starts_at": "Yalnızca etkinlikler başlangıç/bitiş zamanı içerebilir."}
             )
         return attrs
 

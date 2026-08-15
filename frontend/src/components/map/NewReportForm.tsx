@@ -14,12 +14,20 @@ interface Props {
     description: string;
     type: Report["type"];
     visibility?: Report["visibility"];
+    event_starts_at?: string;
+    event_ends_at?: string;
     images: File[];
   }) => Promise<void>;
   onCancel: () => void;
 }
 
 const TYPES = Object.keys(TYPE_LABELS) as Array<Report["type"]>;
+
+/** "YYYY-MM-DDTHH:mm" in local time, the format a datetime-local input's value/min needs. */
+function toDatetimeLocal(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
   const { user } = useUser();
@@ -29,6 +37,8 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
   const [description, setDescription] = useState("");
   const [type, setType] = useState<Report["type"]>("issue");
   const [visibility, setVisibility] = useState<Report["visibility"]>("public");
+  const [eventStartsAt, setEventStartsAt] = useState("");
+  const [eventEndsAt, setEventEndsAt] = useState("");
   const [images, setImages] = useState<File[]>([]);
   // <input type="file"> is uncontrolled and, more importantly, replaces its FileList on
   // every dialog open rather than adding to it — reopening the picker to add a second
@@ -39,6 +49,7 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
   const [saving, setSaving] = useState(false);
 
   const showVisibility = ORG_ONLY_TYPES.has(type);
+  const showEventTimes = type === "event";
 
   function handleFilesSelected(event: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(event.target.files ?? []);
@@ -60,12 +71,16 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
         description: description.trim(),
         type,
         visibility: showVisibility ? visibility : undefined,
+        event_starts_at: showEventTimes ? new Date(eventStartsAt).toISOString() : undefined,
+        event_ends_at: showEventTimes ? new Date(eventEndsAt).toISOString() : undefined,
         images,
       });
       setTitle("");
       setDescription("");
       setType("issue");
       setVisibility("public");
+      setEventStartsAt("");
+      setEventEndsAt("");
       setImages([]);
       setFileInputKey((key) => key + 1);
     } finally {
@@ -128,6 +143,31 @@ export default function NewReportForm({ position, onSubmit, onCancel }: Props) {
             Yalnızca üyelere
           </label>
         </fieldset>
+      )}
+
+      {showEventTimes && (
+        <>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            <span style={{ fontSize: "0.8rem" }}>Başlangıç zamanı</span>
+            <input
+              type="datetime-local"
+              value={eventStartsAt}
+              min={toDatetimeLocal(new Date())}
+              required
+              onChange={(e) => setEventStartsAt(e.target.value)}
+            />
+          </label>
+          <label style={{ display: "block", marginBottom: "0.75rem" }}>
+            <span style={{ fontSize: "0.8rem" }}>Bitiş zamanı</span>
+            <input
+              type="datetime-local"
+              value={eventEndsAt}
+              min={eventStartsAt || toDatetimeLocal(new Date())}
+              required
+              onChange={(e) => setEventEndsAt(e.target.value)}
+            />
+          </label>
+        </>
       )}
 
       <label style={{ display: "block", marginBottom: "0.5rem" }}>

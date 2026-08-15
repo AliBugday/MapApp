@@ -5,11 +5,20 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, fetchReport, setUpvote, updateReportStatus, type Report } from "@/lib/api";
+import {
+  ApiError,
+  fetchReport,
+  setRsvp,
+  setUpvote,
+  updateReportStatus,
+  type Report,
+} from "@/lib/api";
 import { useUser } from "@/lib/auth";
+import { formatEventRange } from "@/lib/format";
 import { STATUS_LABELS } from "@/lib/statusLabels";
 import { TYPE_LABELS } from "@/lib/typeLabels";
 import AppHeader from "@/components/AppHeader";
+import RsvpButton from "@/components/RsvpButton";
 import UpvoteButton from "@/components/UpvoteButton";
 import CommentSection from "@/components/reports/CommentSection";
 
@@ -68,6 +77,30 @@ export default function ReportDetailPage() {
     } catch (err) {
       setReport(previous);
       setError(err instanceof ApiError ? err.message : "Oy kaydedilemedi.");
+    }
+  }, [report, user]);
+
+  const handleToggleRsvp = useCallback(async () => {
+    if (!report) return;
+    if (!user) {
+      setError("Katılım bildirmek için harita sayfasından giriş yapın.");
+      return;
+    }
+    const previous = report;
+    const next = !previous.has_rsvped;
+
+    setReport({
+      ...previous,
+      has_rsvped: next,
+      rsvp_count: previous.rsvp_count + (next ? 1 : -1),
+    });
+    try {
+      const confirmed = await setRsvp(previous.id, next);
+      setReport((current) => (current ? { ...current, ...confirmed } : current));
+      setError(null);
+    } catch (err) {
+      setReport(previous);
+      setError(err instanceof ApiError ? err.message : "Katılım kaydedilemedi.");
     }
   }, [report, user]);
 
@@ -133,6 +166,12 @@ export default function ReportDetailPage() {
               {new Date(report.created_at).toLocaleDateString()}
             </p>
 
+            {report.type === "event" && report.event_starts_at && report.event_ends_at && (
+              <p style={{ fontWeight: 600, marginTop: 0 }}>
+                📅 {formatEventRange(report.event_starts_at, report.event_ends_at)}
+              </p>
+            )}
+
             {report.description ? (
               <p style={{ whiteSpace: "pre-wrap" }}>{report.description}</p>
             ) : (
@@ -180,7 +219,11 @@ export default function ReportDetailPage() {
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <UpvoteButton report={report} onToggle={handleToggleUpvote} />
+              {report.type === "event" ? (
+                <RsvpButton report={report} onToggle={handleToggleRsvp} />
+              ) : (
+                <UpvoteButton report={report} onToggle={handleToggleUpvote} />
+              )}
               <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
                 {report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}
               </span>

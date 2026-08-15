@@ -11,6 +11,9 @@ export interface PinInput {
   comment_count: number;
   /** First uploaded photo, once image upload exists. Falls back to the type glyph. */
   thumbnailUrl?: string | null;
+  /** type="event" whose event_ends_at has passed. Computed by the caller (needs Date.now()),
+   * not here, so the cache-key function stays a pure function of its visual inputs. */
+  isPastEvent?: boolean;
 }
 
 const RESOLVED_RING = "#9aa4b2";
@@ -36,6 +39,7 @@ function keyFor(pin: PinInput): string {
     pin.upvote_count,
     pin.comment_count,
     pin.thumbnailUrl ?? "",
+    pin.isPastEvent ?? false,
   ].join("|");
 }
 
@@ -51,11 +55,14 @@ export function iconFor(pin: PinInput): L.DivIcon {
   const isResolved = (pin.type === "issue" || pin.type === "request") && pin.status === "resolved";
   const isPrivate =
     (pin.type === "announcement" || pin.type === "event") && pin.visibility === "members";
+  // A pin can't be both resolved (issue/request only) and a past event (event only), so
+  // there's no collision to design around — same reasoning as the ✓/🔒 corner-mark slot.
+  const isMuted = isResolved || pin.isPastEvent === true;
 
   const head = sizeFor(pin.upvote_count + pin.comment_count);
   const tail = Math.round(head * TAIL_RATIO);
   const height = head + tail;
-  const ringColor = isResolved ? RESOLVED_RING : TYPE_COLORS[pin.type];
+  const ringColor = isMuted ? RESOLVED_RING : TYPE_COLORS[pin.type];
 
   // The centre only ever shows a photo (our own /media/ URL, generated server-side) or a
   // fixed glyph string from TYPE_GLYPHS — never report title/author text — so this string
@@ -81,7 +88,7 @@ export function iconFor(pin: PinInput): L.DivIcon {
 
   const html = `
     <div class="pin-wrap">
-      <div class="pin-drop${isResolved ? " pin-resolved" : ""}"
+      <div class="pin-drop${isMuted ? " pin-resolved" : ""}"
            style="width:${head}px;height:${head}px;border-color:${ringColor}">
         <div class="pin-drop-inner">${centerHtml}</div>
       </div>
