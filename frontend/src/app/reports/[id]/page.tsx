@@ -71,10 +71,10 @@ export default function ReportDetailPage() {
     }
   }, [report, user]);
 
-  // The backend is the real authority (a non-author PATCH just 403s) — this only decides
-  // whether to show the control at all, matched by username since Report carries no
-  // author id, only author_username.
-  const isAuthor = Boolean(user && report && user.username === report.author_username);
+  // The backend is the real authority (a non-municipality PATCH just 403s) — this only
+  // decides whether to show the control at all. Status approval belongs to the
+  // municipality, not the report's own author.
+  const canModerate = user?.organization_kind === "municipality";
 
   const handleStatusChange = useCallback(
     async (nextStatus: Report["status"]) => {
@@ -156,7 +156,7 @@ export default function ReportDetailPage() {
               </div>
             )}
 
-            {isAuthor && (report.type === "issue" || report.type === "request") && (
+            {canModerate && (report.type === "issue" || report.type === "request") && (
               <label
                 style={{
                   display: "block",
@@ -165,7 +165,7 @@ export default function ReportDetailPage() {
                   maxWidth: 220,
                 }}
               >
-                <span>Durum (yalnızca siz görürsünüz)</span>
+                <span>Durum güncelle (belediye yetkilisi)</span>
                 <select
                   value={report.status}
                   onChange={(e) => handleStatusChange(e.target.value as Report["status"])}

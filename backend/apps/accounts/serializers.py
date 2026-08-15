@@ -10,10 +10,13 @@ class UserSerializer(serializers.ModelSerializer):
     organization_name = serializers.CharField(
         source="organization.name", read_only=True, allow_null=True
     )
+    organization_kind = serializers.CharField(
+        source="organization.kind", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "organization_name"]
+        fields = ["id", "username", "email", "organization_name", "organization_kind"]
         read_only_fields = fields
 
 
