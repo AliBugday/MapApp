@@ -1,16 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, fetchReport, setUpvote, type Report } from "@/lib/api";
+import { ApiError, fetchReport, setUpvote, updateReportStatus, type Report } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { STATUS_LABELS } from "@/lib/statusLabels";
 import { TYPE_LABELS } from "@/lib/typeLabels";
 import AppHeader from "@/components/AppHeader";
 import UpvoteButton from "@/components/UpvoteButton";
 import CommentSection from "@/components/reports/CommentSection";
+
+const STATUSES = Object.keys(STATUS_LABELS) as Array<Report["status"]>;
 
 /**
  * A client component, so it shares the UserProvider in the root layout and can reuse
@@ -68,6 +71,28 @@ export default function ReportDetailPage() {
     }
   }, [report, user]);
 
+  // The backend is the real authority (a non-author PATCH just 403s) — this only decides
+  // whether to show the control at all, matched by username since Report carries no
+  // author id, only author_username.
+  const isAuthor = Boolean(user && report && user.username === report.author_username);
+
+  const handleStatusChange = useCallback(
+    async (nextStatus: Report["status"]) => {
+      if (!report) return;
+      const previous = report;
+      setReport({ ...previous, status: nextStatus });
+      try {
+        const updated = await updateReportStatus(report.id, nextStatus);
+        setReport((current) => (current ? { ...current, ...updated } : current));
+        setError(null);
+      } catch (err) {
+        setReport(previous);
+        setError(err instanceof ApiError ? err.message : "Durum güncellenemedi.");
+      }
+    },
+    [report],
+  );
+
   return (
     <main style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppHeader />
@@ -112,6 +137,46 @@ export default function ReportDetailPage() {
               <p style={{ whiteSpace: "pre-wrap" }}>{report.description}</p>
             ) : (
               <p style={{ color: "var(--muted)", fontStyle: "italic" }}>Açıklama verilmedi.</p>
+            )}
+
+            {report.images.length > 0 && (
+              <div
+                style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", margin: "0.75rem 0" }}
+              >
+                {report.images.map((image) => (
+                  <Image
+                    key={image.id}
+                    src={image.url}
+                    alt=""
+                    width={220}
+                    height={165}
+                    style={{ objectFit: "cover", borderRadius: 6 }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {isAuthor && (report.type === "issue" || report.type === "request") && (
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.8rem",
+                  marginBottom: "0.75rem",
+                  maxWidth: 220,
+                }}
+              >
+                <span>Durum (yalnızca siz görürsünüz)</span>
+                <select
+                  value={report.status}
+                  onChange={(e) => handleStatusChange(e.target.value as Report["status"])}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>

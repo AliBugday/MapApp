@@ -42,6 +42,13 @@ def other_org_user(db):
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_media_root(settings, tmp_path):
+    """Image-upload tests write real files; without this override they'd land in the dev
+    media volume instead of a throwaway per-test directory."""
+    settings.MEDIA_ROOT = tmp_path
+
+
 @pytest.fixture
 def client():
     return APIClient()

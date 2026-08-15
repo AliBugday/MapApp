@@ -3,11 +3,34 @@ from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
-from .models import Report, Upvote
-from .serializers import CommentSerializer, ReportSerializer
+from .models import Report, ReportImage, Upvote
+from .serializers import (
+    CommentSerializer,
+    ReportImageSerializer,
+    ReportSerializer,
+    ReportStatusUpdateSerializer,
+)
+
+
+class IsAuthorOrStaffOrReadOnly(BasePermission):
+    """Only the report's author (or staff) may PATCH it or attach an image.
+
+    Object-level only: has_permission stays the default True, since every action this is
+    used with already calls get_object() -> check_object_permissions(), and "who is the
+    author" is only knowable once the object is in hand.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        return user.is_staff or obj.author_id == user.id
 
 
 def parse_bbox(raw: str) -> Polygon:
@@ -28,10 +51,23 @@ class ReportViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     serializer_class = ReportSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self):
+        # PATCH can only ever change status — see ReportStatusUpdateSerializer's docstring
+        # for why that's a separate serializer rather than reusing ReportSerializer.
+        if self.action in ("update", "partial_update"):
+            return ReportStatusUpdateSerializer
+        return ReportSerializer
+
+    def get_permissions(self):
+        if self.action in ("update", "partial_update", "images"):
+            return [IsAuthorOrStaffOrReadOnly()]
+        return super().get_permissions()
 
     def get_queryset(self):
         # Explicit order_by, not just Meta.ordering: annotate() adds a GROUP BY, which
@@ -43,6 +79,7 @@ class ReportViewSet(
         # comments would otherwise report 12 of each.
         queryset = (
             Report.objects.select_related("author__organization")
+            .prefetch_related("images")
             .annotate(
                 upvote_count=Count("upvotes", distinct=True),
                 comment_count=Count("comments", distinct=True),
@@ -134,3 +171,22 @@ class ReportViewSet(
         # select_related because the serializer reads author.username on every row.
         queryset = report.comments.select_related("author")
         return Response(CommentSerializer(queryset, many=True).data)
+
+    @action(detail=True, methods=["post"], parser_classes=[MultiPartParser])
+    def images(self, request, pk=None):
+        """Attach a photo to a report.
+
+        A separate request from create_report() rather than accepting a file on the
+        report's own JSON payload — mixing JSON and multipart in one request complicates
+        both. Restricted to the author (or staff) via IsAuthorOrStaffOrReadOnly, applied in
+        get_permissions() above.
+        """
+        report = self.get_object()
+        image_file = request.FILES.get("image")
+        if not image_file:
+            raise ValidationError({"image": "Bir görsel dosyası gerekli."})
+        report_image = ReportImage.objects.create(report=report, image=image_file)
+        return Response(
+            ReportImageSerializer(report_image).data,
+            status=status.HTTP_201_CREATED,
+        )

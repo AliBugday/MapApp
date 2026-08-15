@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { ApiError, createReport, fetchReports, setUpvote, type Report } from "@/lib/api";
+import {
+  ApiError,
+  createReport,
+  fetchReports,
+  setUpvote,
+  uploadReportImage,
+  type Report,
+} from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { STATUS_LABELS } from "@/lib/statusLabels";
 import { TYPE_LABELS } from "@/lib/typeLabels";
@@ -47,16 +54,45 @@ export default function MapPanel() {
       description: string;
       type: Report["type"];
       visibility?: Report["visibility"];
+      images: File[];
     }) => {
       if (!pending) return;
+      const { images, ...reportInput } = input;
+      let created: Report;
       try {
-        const created = await createReport({ ...input, ...pending });
-        // Prepend so it matches the API's newest-first ordering.
-        setReports((current) => [created, ...current]);
-        setPending(null);
-        setError(null);
+        created = await createReport({ ...reportInput, ...pending });
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Bildirim kaydedilemedi.");
+        return;
+      }
+      // Prepend so it matches the API's newest-first ordering.
+      setReports((current) => [created, ...current]);
+      setPending(null);
+      setError(null);
+
+      // The report itself is already saved at this point — a failed upload shouldn't look
+      // like the whole submission failed, just that a photo didn't attach. Sequential rather
+      // than Promise.all: simpler to reason about, and a demo report only ever carries a
+      // handful of photos, so there's no throughput reason to parallelize.
+      let failedUploads = 0;
+      for (const file of images) {
+        try {
+          const attachedImage = await uploadReportImage(created.id, file);
+          setReports((current) =>
+            current.map((r) =>
+              r.id === created.id ? { ...r, images: [...r.images, attachedImage] } : r,
+            ),
+          );
+        } catch {
+          failedUploads += 1;
+        }
+      }
+      if (failedUploads > 0) {
+        setError(
+          failedUploads === 1
+            ? "Bir fotoğraf yüklenemedi."
+            : `${failedUploads} fotoğraf yüklenemedi.`,
+        );
       }
     },
     [pending],

@@ -1,7 +1,7 @@
 from django.contrib.gis.geos import Point
 from rest_framework import serializers
 
-from .models import Comment, Report
+from .models import Comment, Report, ReportImage
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -13,6 +13,35 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ["id", "body", "author_username", "created_at"]
         read_only_fields = ["id", "author_username", "created_at"]
+
+
+class ReportImageSerializer(serializers.ModelSerializer):
+    """Read-only: images are attached through the dedicated upload action, never as a
+    field on ReportSerializer, since that would mean mixing JSON and multipart payloads.
+
+    Note: `/media/...` is served as plain static files (see config/urls.py), so these URLs
+    are not access-controlled — unlike the report itself, a members-only report's image is
+    reachable by anyone who has the URL. Acceptable for a demo; real access control would
+    mean signed URLs, which is a S3 concern this project deliberately isn't taking on yet.
+    """
+
+    # Plain SerializerMethodFields rather than ImageField(source=...): DRF's ImageField
+    # builds an *absolute* URL from the request when a "request" is in context (which the
+    # nested use here inherits from ReportSerializer), and that request's host inside
+    # Docker is "backend:8000" — unreachable from the browser. A relative "/media/..." path
+    # is what the Next.js proxy (next.config.ts) actually forwards.
+    url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReportImage
+        fields = ["id", "url", "thumbnail_url"]
+
+    def get_url(self, obj) -> str:
+        return obj.image.url
+
+    def get_thumbnail_url(self, obj) -> str:
+        return obj.thumbnail.url
 
 
 class ReportSerializer(serializers.ModelSerializer):
@@ -35,6 +64,7 @@ class ReportSerializer(serializers.ModelSerializer):
     upvote_count = serializers.SerializerMethodField()
     comment_count = serializers.SerializerMethodField()
     has_upvoted = serializers.SerializerMethodField()
+    images = ReportImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Report
@@ -52,6 +82,7 @@ class ReportSerializer(serializers.ModelSerializer):
             "upvote_count",
             "comment_count",
             "has_upvoted",
+            "images",
             "created_at",
             "updated_at",
         ]
@@ -97,3 +128,17 @@ class ReportSerializer(serializers.ModelSerializer):
         # PostGIS point order is (x, y) == (longitude, latitude).
         validated_data["location"] = Point(longitude, latitude, srid=4326)
         return super().create(validated_data)
+
+
+class ReportStatusUpdateSerializer(serializers.ModelSerializer):
+    """The only thing PATCH /api/reports/{id}/ can change.
+
+    A separate serializer rather than reusing ReportSerializer for updates: that one marks
+    `status` read-only (it must stay that way for create), and a single serializer that's
+    read-only in one context and writable in another is a harder rule for the next reader
+    to follow than two small serializers with one job each.
+    """
+
+    class Meta:
+        model = Report
+        fields = ["status"]
