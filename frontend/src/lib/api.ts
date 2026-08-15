@@ -62,6 +62,15 @@ export interface User {
   work_longitude: number | null;
 }
 
+export interface Notification {
+  id: number;
+  report_id: number;
+  report_title: string;
+  report_type: Report["type"];
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface Paginated<T> {
   count: number;
   next: string | null;
@@ -267,4 +276,14 @@ export function updateReportStatus(reportId: number, status: Report["status"]): 
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+}
+
+/** A flat array, not a paginated envelope — same reasoning as fetchComments: read all at
+ * once for the bell dropdown, not paged. */
+export function fetchNotifications(): Promise<Notification[]> {
+  return apiFetch<Notification[]>("/api/notifications/");
+}
+
+export function markNotificationsRead(): Promise<void> {
+  return apiFetch<void>("/api/notifications/", { method: "POST" });
 }

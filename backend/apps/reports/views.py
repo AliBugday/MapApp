@@ -9,6 +9,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthentic
 from rest_framework.response import Response
 
 from apps.accounts.models import Organization
+from apps.notifications.services import notify_nearby_users
 
 from .models import EventRSVP, Report, ReportImage, Upvote
 from .serializers import (
@@ -153,7 +154,8 @@ class ReportViewSet(
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        report = serializer.save(author=self.request.user)
+        notify_nearby_users(report)
 
     @action(detail=True, methods=["post", "delete"])
     def upvote(self, request, pk=None):
