@@ -54,6 +54,8 @@ export default function MapPanel() {
       description: string;
       type: Report["type"];
       visibility?: Report["visibility"];
+      event_starts_at?: string;
+      event_ends_at?: string;
       images: File[];
     }) => {
       if (!pending) return;

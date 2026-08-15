@@ -11,6 +11,9 @@ export interface Report {
   status: "open" | "in_progress" | "resolved" | "rejected";
   type: "issue" | "request" | "announcement" | "event";
   visibility: "public" | "members";
+  /** Only present for type="event"; null otherwise. */
+  event_starts_at: string | null;
+  event_ends_at: string | null;
   latitude: number;
   longitude: number;
   author_username: string | null;
@@ -19,6 +22,9 @@ export interface Report {
   comment_count: number;
   /** Whether the *current* user has upvoted; always present, false when anonymous. */
   has_upvoted: boolean;
+  rsvp_count: number;
+  /** Whether the *current* user has RSVPed; always present, false when anonymous. */
+  has_rsvped: boolean;
   images: ReportImage[];
   created_at: string;
   updated_at: string;
@@ -35,6 +41,12 @@ export interface Comment {
 export interface UpvoteState {
   upvote_count: number;
   has_upvoted: boolean;
+}
+
+/** What the rsvp endpoint returns, for reconciling an optimistic update. */
+export interface RsvpState {
+  rsvp_count: number;
+  has_rsvped: boolean;
 }
 
 export interface User {
@@ -110,6 +122,8 @@ const FIELD_LABELS: Record<string, string> = {
   type: "Tür",
   visibility: "Görünürlük",
   image: "Görsel",
+  event_starts_at: "Başlangıç zamanı",
+  event_ends_at: "Bitiş zamanı",
 };
 
 async function describeError(response: Response): Promise<string> {
@@ -174,6 +188,18 @@ export function setUpvote(reportId: number, upvoted: boolean): Promise<UpvoteSta
   });
 }
 
+/**
+ * Add or remove the current user's RSVP to an event.
+ *
+ * Both directions are idempotent server-side, so a retry after a failed request is
+ * safe and cannot double-count.
+ */
+export function setRsvp(reportId: number, attending: boolean): Promise<RsvpState> {
+  return apiFetch<RsvpState>(`/api/reports/${reportId}/rsvp/`, {
+    method: attending ? "POST" : "DELETE",
+  });
+}
+
 export function fetchReport(reportId: number): Promise<Report> {
   return apiFetch<Report>(`/api/reports/${reportId}/`);
 }
@@ -199,6 +225,8 @@ export function createReport(input: {
   description: string;
   type: Report["type"];
   visibility?: Report["visibility"];
+  event_starts_at?: string;
+  event_ends_at?: string;
   latitude: number;
   longitude: number;
 }): Promise<Report> {

@@ -38,6 +38,10 @@ class Report(models.Model):
     visibility = models.CharField(
         max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC
     )
+    # Only meaningful for type=event; enforced in ReportSerializer.validate(), same reasoning
+    # as visibility above.
+    event_starts_at = models.DateTimeField(null=True, blank=True)
+    event_ends_at = models.DateTimeField(null=True, blank=True)
 
     # geography=True so distance lookups are in metres on a sphere. With a plain
     # geometry column at SRID 4326, distances come back in degrees, which makes
@@ -98,6 +102,26 @@ class Upvote(models.Model):
 
     def __str__(self):
         return f"{self.user_id} upvoted {self.report_id}"
+
+
+class EventRSVP(models.Model):
+    """One row per user per event report — same idempotency reasoning as Upvote: a row,
+    not a counter, so a double-tap or a retried request cannot inflate the total.
+    """
+
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="rsvps")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="rsvps"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["report", "user"], name="unique_rsvp_per_user")
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} RSVPed to {self.report_id}"
 
 
 class ReportImage(models.Model):

@@ -1,5 +1,6 @@
 from django.contrib.gis.geos import Polygon
 from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -9,7 +10,7 @@ from rest_framework.response import Response
 
 from apps.accounts.models import Organization
 
-from .models import Report, ReportImage, Upvote
+from .models import EventRSVP, Report, ReportImage, Upvote
 from .serializers import (
     CommentSerializer,
     ReportImageSerializer,
@@ -97,31 +98,37 @@ class ReportViewSet(
         # Explicit order_by, not just Meta.ordering: annotate() adds a GROUP BY, which
         # makes Django report the queryset as unordered and gives DRF unstable pagination.
         #
-        # distinct=True on BOTH counts is required, not optional: annotating two Count()s
-        # over different reverse FKs (upvotes and comments) in one queryset joins both
-        # tables at once, producing a cartesian product — a report with 3 upvotes and 4
-        # comments would otherwise report 12 of each.
+        # distinct=True on ALL THREE counts is required, not optional: annotating multiple
+        # Count()s over different reverse FKs (upvotes, comments, rsvps) in one queryset
+        # joins all three tables at once, producing a cartesian product — a report with 3
+        # upvotes, 4 comments and 2 rsvps would otherwise report inflated, mutually-multiplied
+        # totals for each.
         queryset = (
             Report.objects.select_related("author__organization")
             .prefetch_related("images")
             .annotate(
                 upvote_count=Count("upvotes", distinct=True),
                 comment_count=Count("comments", distinct=True),
+                rsvp_count=Count("rsvps", distinct=True),
             )
             .order_by("-created_at")
         )
 
-        # has_upvoted comes from the database as a subquery rather than a per-report
-        # lookup in the serializer, which would be one extra query per marker.
+        # has_upvoted/has_rsvped come from the database as subqueries rather than a
+        # per-report lookup in the serializer, which would be one extra query per marker.
         user = self.request.user
         if user.is_authenticated:
             queryset = queryset.annotate(
-                has_upvoted=Exists(Upvote.objects.filter(report=OuterRef("pk"), user=user))
+                has_upvoted=Exists(Upvote.objects.filter(report=OuterRef("pk"), user=user)),
+                has_rsvped=Exists(EventRSVP.objects.filter(report=OuterRef("pk"), user=user)),
             )
         else:
             # Annotated as a constant so the field is always present in the response,
             # rather than the shape changing depending on who is asking.
-            queryset = queryset.annotate(has_upvoted=Value(False, output_field=BooleanField()))
+            queryset = queryset.annotate(
+                has_upvoted=Value(False, output_field=BooleanField()),
+                has_rsvped=Value(False, output_field=BooleanField()),
+            )
 
         # A members-only report is visible to anonymous/other users nowhere at all — not
         # in the list, and not via retrieve/upvote/comments either, since all three
@@ -163,8 +170,16 @@ class ReportViewSet(
 
         IsAuthenticatedOrReadOnly already covers this: POST and DELETE are both unsafe
         methods, so an anonymous caller gets a 403 without a separate permission class.
+
+        Events use RSVP instead — the two would otherwise mean the same thing ("I care
+        about this") for that type, so upvote is rejected there rather than left as a
+        redundant second signal.
         """
         report = self.get_object()
+        if report.type == Report.Type.EVENT:
+            raise ValidationError(
+                {"detail": "Etkinlikler için oy değil, katılım (RSVP) kullanılır."}
+            )
         if request.method == "POST":
             Upvote.objects.get_or_create(report=report, user=request.user)
             has_upvoted = True
@@ -172,6 +187,29 @@ class ReportViewSet(
             Upvote.objects.filter(report=report, user=request.user).delete()
             has_upvoted = False
         return Response({"upvote_count": report.upvotes.count(), "has_upvoted": has_upvoted})
+
+    @action(detail=True, methods=["post", "delete"])
+    def rsvp(self, request, pk=None):
+        """Add or remove the current user's RSVP to an event.
+
+        Same idempotency reasoning as upvote: get_or_create means a double-tap can't
+        inflate the count. Restricted to type=event reports that haven't ended yet — a
+        members-only event's visibility filter already applies via get_object(), so a
+        non-member gets a 404 with no extra permission code needed.
+        """
+        report = self.get_object()
+        if report.type != Report.Type.EVENT:
+            raise ValidationError({"detail": "Yalnızca etkinliklere katılım bildirilebilir."})
+        if report.event_ends_at and report.event_ends_at < timezone.now():
+            raise ValidationError({"detail": "Etkinlik sona erdiği için katılım bildirilemez."})
+
+        if request.method == "POST":
+            EventRSVP.objects.get_or_create(report=report, user=request.user)
+            has_rsvped = True
+        else:
+            EventRSVP.objects.filter(report=report, user=request.user).delete()
+            has_rsvped = False
+        return Response({"rsvp_count": report.rsvps.count(), "has_rsvped": has_rsvped})
 
     @action(detail=True, methods=["get", "post"], url_path="comments")
     def comments(self, request, pk=None):

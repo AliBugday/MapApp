@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
@@ -10,6 +11,12 @@ from .factories import ISTANBUL
 
 def _create(client, **overrides):
     payload = {"title": "Test", **ISTANBUL, **overrides}
+    # Events now require a start/end time — fill in a plausible future range by default so
+    # tests about visibility rules don't also have to know about event scheduling.
+    if payload.get("type") == "event" and "event_starts_at" not in payload:
+        starts_at = timezone.now() + timezone.timedelta(days=1)
+        payload["event_starts_at"] = starts_at.isoformat()
+        payload["event_ends_at"] = (starts_at + timezone.timedelta(hours=2)).isoformat()
     return client.post("/api/reports/", payload, format="json")
 
 
