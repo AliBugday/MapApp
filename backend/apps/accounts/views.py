@@ -6,6 +6,7 @@ so the cookie just works. No new dependency.
 """
 
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.gis.geos import Point
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -13,7 +14,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    LocationUpdateSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 
 
 class RegisterView(APIView):
@@ -82,3 +88,29 @@ class MeView(APIView):
     def get(self, request):
         user = request.user if request.user.is_authenticated else None
         return Response({"user": UserSerializer(user).data if user else None})
+
+    def patch(self, request):
+        """Set or clear the signed-in user's home/work location.
+
+        permission_classes stays AllowAny at the class level (GET must work for
+        anonymous), so the auth check is inline here instead — same shape already used in
+        apps/reports/views.py's permission classes.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        serializer = LocationUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if "home" in serializer.validated_data:
+            home = serializer.validated_data["home"]
+            user.home_location = (
+                Point(home["longitude"], home["latitude"], srid=4326) if home else None
+            )
+        if "work" in serializer.validated_data:
+            work = serializer.validated_data["work"]
+            user.work_location = (
+                Point(work["longitude"], work["latitude"], srid=4326) if work else None
+            )
+        user.save()
+        return Response({"user": UserSerializer(user).data})

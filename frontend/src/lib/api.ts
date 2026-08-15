@@ -55,6 +55,11 @@ export interface User {
   email: string;
   organization_name: string | null;
   organization_kind: "municipality" | "public" | null;
+  /** Private — only ever present on the signed-in user's own record. */
+  home_latitude: number | null;
+  home_longitude: number | null;
+  work_latitude: number | null;
+  work_longitude: number | null;
 }
 
 export interface Paginated<T> {
@@ -174,6 +179,22 @@ export function login(input: { username: string; password: string }): Promise<Us
 
 export function logout(): Promise<void> {
   return apiFetch<void>("/api/auth/logout/", { method: "POST" });
+}
+
+/**
+ * Set (with a point) or clear (with null) the signed-in user's home/work location.
+ *
+ * A key's absence in the underlying PATCH would leave that location untouched, but this
+ * wrapper always sends the one key being changed, so callers just pass what they mean.
+ */
+export function updateMyLocation(
+  kind: "home" | "work",
+  point: { latitude: number; longitude: number } | null,
+): Promise<User> {
+  return apiFetch<{ user: User }>("/api/auth/me/", {
+    method: "PATCH",
+    body: JSON.stringify({ [kind]: point }),
+  }).then((data) => data.user);
 }
 
 /**
