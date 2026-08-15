@@ -7,6 +7,8 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
+from apps.accounts.models import Organization
+
 from .models import Report, ReportImage, Upvote
 from .serializers import (
     CommentSerializer,
@@ -17,7 +19,7 @@ from .serializers import (
 
 
 class IsAuthorOrStaffOrReadOnly(BasePermission):
-    """Only the report's author (or staff) may PATCH it or attach an image.
+    """Only the report's author (or staff) may attach an image.
 
     Object-level only: has_permission stays the default True, since every action this is
     used with already calls get_object() -> check_object_permissions(), and "who is the
@@ -31,6 +33,26 @@ class IsAuthorOrStaffOrReadOnly(BasePermission):
         if not user.is_authenticated:
             return False
         return user.is_staff or obj.author_id == user.id
+
+
+class IsMunicipalityMemberOrStaffOrReadOnly(BasePermission):
+    """Only a municipality-organization member (or staff) may change a report's status.
+
+    The citizen author has no authority here — status approval belongs to the
+    municipality, not the person who filed the report. Object-level only, same
+    rationale as IsAuthorOrStaffOrReadOnly: has_permission stays default True.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        if user.is_staff:
+            return True
+        organization = getattr(user, "organization", None)
+        return organization is not None and organization.kind == Organization.Kind.MUNICIPALITY
 
 
 def parse_bbox(raw: str) -> Polygon:
@@ -65,7 +87,9 @@ class ReportViewSet(
         return ReportSerializer
 
     def get_permissions(self):
-        if self.action in ("update", "partial_update", "images"):
+        if self.action in ("update", "partial_update"):
+            return [IsMunicipalityMemberOrStaffOrReadOnly()]
+        if self.action == "images":
             return [IsAuthorOrStaffOrReadOnly()]
         return super().get_permissions()
 

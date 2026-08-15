@@ -42,6 +42,7 @@ export interface User {
   username: string;
   email: string;
   organization_name: string | null;
+  organization_kind: "municipality" | "public" | null;
 }
 
 export interface Paginated<T> {
