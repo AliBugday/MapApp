@@ -29,7 +29,15 @@ const ReportMap = dynamic(() => import("./ReportMap"), {
 const ISTANBUL: LatLng = { latitude: 41.0082, longitude: 28.9784 };
 
 export default function MapPanel() {
-  const { user, loading: userLoading } = useUser();
+  const {
+    user,
+    loading: userLoading,
+    pickingLocation,
+    pendingLocationPoint,
+    setPendingLocationPoint,
+    cancelLocationPicking,
+    confirmLocationPicking,
+  } = useUser();
   const [reports, setReports] = useState<Report[]>([]);
   const [pending, setPending] = useState<LatLng | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +55,12 @@ export default function MapPanel() {
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userLoading, user?.id]);
+
+  // Location picking is armed from the header, not here — this just yields to it: only
+  // one "click the map to do X" mode makes sense at a time.
+  useEffect(() => {
+    if (pickingLocation) setPending(null);
+  }, [pickingLocation]);
 
   const handleCreate = useCallback(
     async (input: {
@@ -100,6 +114,26 @@ export default function MapPanel() {
     [pending],
   );
 
+  const handleMapClick = useCallback(
+    (position: LatLng) => {
+      if (pickingLocation) {
+        setPendingLocationPoint(position);
+      } else {
+        setPending(position);
+      }
+    },
+    [pickingLocation, setPendingLocationPoint],
+  );
+
+  const handleConfirmLocation = useCallback(async () => {
+    try {
+      await confirmLocationPicking();
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Konum kaydedilemedi.");
+    }
+  }, [confirmLocationPicking]);
+
   const handleToggleUpvote = useCallback(
     async (target: Pick<Report, "id" | "has_upvoted">) => {
       if (!user) {
@@ -134,16 +168,27 @@ export default function MapPanel() {
 
   const center = useMemo(() => reports[0] ?? ISTANBUL, [reports]);
 
+  const homeLocation =
+    user?.home_latitude != null && user?.home_longitude != null
+      ? { latitude: user.home_latitude, longitude: user.home_longitude }
+      : null;
+  const workLocation =
+    user?.work_latitude != null && user?.work_longitude != null
+      ? { latitude: user.work_latitude, longitude: user.work_longitude }
+      : null;
+
   return (
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
       <div style={{ flex: 1, position: "relative" }}>
         <ReportMap
           reports={reports}
           pending={pending}
-          onMapClick={setPending}
+          onMapClick={handleMapClick}
           onToggleUpvote={handleToggleUpvote}
           center={center}
           zoom={13}
+          homeLocation={homeLocation}
+          workLocation={workLocation}
         />
         <MapLegend />
       </div>
@@ -176,12 +221,49 @@ export default function MapPanel() {
             new-report form for the spot they picked. */}
         {userLoading ? null : !user ? (
           <AuthPanel />
+        ) : pendingLocationPoint && pickingLocation ? (
+          <div style={{ border: "1px solid var(--border)", borderRadius: 4, padding: "0.75rem" }}>
+            <p style={{ fontSize: "0.85rem", marginTop: 0 }}>
+              Bu noktayı {pickingLocation === "home" ? "ev" : "iş/okul"} konumu olarak kaydet?
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => void handleConfirmLocation()}
+                style={{
+                  background: "var(--accent)",
+                  color: "white",
+                  border: 0,
+                  borderRadius: 4,
+                  padding: "0.5rem 0.9rem",
+                }}
+              >
+                Kaydet
+              </button>
+              <button
+                type="button"
+                onClick={cancelLocationPicking}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  borderRadius: 4,
+                  padding: "0.5rem 0.9rem",
+                }}
+              >
+                İptal
+              </button>
+            </div>
+          </div>
         ) : pending ? (
           <NewReportForm
             position={pending}
             onSubmit={handleCreate}
             onCancel={() => setPending(null)}
           />
+        ) : pickingLocation ? (
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+            {pickingLocation === "home" ? "Ev" : "İş/okul"} konumu için haritada bir yere tıklayın.
+          </p>
         ) : (
           <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
             Bildirim eklemek için haritada bir yere tıklayın.

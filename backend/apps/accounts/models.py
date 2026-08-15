@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.contrib.gis.db import models as gis_models
 from django.db import models
 
 
@@ -25,7 +26,7 @@ class User(AbstractUser):
     """Custom user model.
 
     Exists from the first migration because switching AUTH_USER_MODEL afterwards means
-    rebuilding migration history. Future profile fields (home location) land here.
+    rebuilding migration history.
     """
 
     organization = models.ForeignKey(
@@ -35,3 +36,8 @@ class User(AbstractUser):
         blank=True,
         related_name="members",
     )
+    # Private — never exposed on any report or any other user's profile, only on this
+    # user's own /api/auth/me/ response. geography=True for the same reason as
+    # Report.location (apps/reports/models.py): distance lookups need real metres.
+    home_location = gis_models.PointField(geography=True, srid=4326, null=True, blank=True)
+    work_location = gis_models.PointField(geography=True, srid=4326, null=True, blank=True)

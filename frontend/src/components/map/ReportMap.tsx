@@ -34,6 +34,21 @@ function ClickHandler({ onMapClick }: { onMapClick: (position: LatLng) => void }
   return null;
 }
 
+// Fixed, built once — unlike report pins there are at most two of these and they change
+// rarely, so markerIcon.ts's per-render caching machinery would be overkill here.
+const HOME_ICON = L.divIcon({
+  html: `<span style="font-size:22px">🏠</span>`,
+  className: "location-marker-icon",
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+const WORK_ICON = L.divIcon({
+  html: `<span style="font-size:22px">💼</span>`,
+  className: "location-marker-icon",
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
 export default function ReportMap({
   reports,
   pending,
@@ -41,6 +56,8 @@ export default function ReportMap({
   onToggleUpvote,
   center,
   zoom,
+  homeLocation,
+  workLocation,
 }: ReportMapProps) {
   return (
     <MapContainer
@@ -142,6 +159,21 @@ export default function ReportMap({
       {pending && (
         <Marker position={[pending.latitude, pending.longitude]} opacity={0.6}>
           <Popup>Buraya yeni bildirim</Popup>
+        </Marker>
+      )}
+
+      {homeLocation && (
+        <Marker position={[homeLocation.latitude, homeLocation.longitude]} icon={HOME_ICON}>
+          <Tooltip direction="top" offset={[0, -6]}>
+            Ev konumunuz
+          </Tooltip>
+        </Marker>
+      )}
+      {workLocation && (
+        <Marker position={[workLocation.latitude, workLocation.longitude]} icon={WORK_ICON}>
+          <Tooltip direction="top" offset={[0, -6]}>
+            İş/okul konumunuz
+          </Tooltip>
         </Marker>
       )}
     </MapContainer>

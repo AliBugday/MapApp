@@ -18,4 +18,7 @@ export interface ReportMapProps {
   onToggleUpvote: (report: Pick<Report, "id" | "has_upvoted">) => void;
   center: LatLng;
   zoom: number;
+  /** The signed-in user's own home/work points, private — never another user's. */
+  homeLocation?: LatLng | null;
+  workLocation?: LatLng | null;
 }
