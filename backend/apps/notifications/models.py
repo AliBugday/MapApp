@@ -3,17 +3,22 @@ from django.db import models
 
 
 class Notification(models.Model):
-    """A single "an Etkinlik happened near you" notification.
+    """A notification about one report, sent to one recipient.
 
-    No actor/verb fields: this app has exactly one notification kind (a nearby event),
-    and inventing a generic shape for kinds that don't exist yet would be designing for
-    a hypothetical requirement. Add them when a second kind actually needs them.
+    Still no actor/verb fields — the two kinds below (nearby report, popular report) are
+    both fully described by {kind, report, recipient}, so a generic actor/verb shape
+    would add nothing yet. Revisit if a third kind needs more than that.
     """
+
+    class Kind(models.TextChoices):
+        NEARBY = "nearby", "Yakınınızda"
+        POPULAR = "popular", "Popüler oluyor"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"
     )
     report = models.ForeignKey("reports.Report", on_delete=models.CASCADE)
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.NEARBY)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

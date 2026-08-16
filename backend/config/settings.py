@@ -50,6 +50,10 @@ INSTALLED_APPS = [
 # apps/notifications/services.py, so it can be tuned without a code change.
 NEARBY_NOTIFICATION_RADIUS_KM = float(env("NEARBY_NOTIFICATION_RADIUS_KM", "5"))
 
+# Upvote count a report must reach for its author to be told it's getting popular.
+# Inclusive — reaching 3 notifies, not only exceeding it.
+POPULARITY_UPVOTE_THRESHOLD = int(env("POPULARITY_UPVOTE_THRESHOLD", "3"))
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

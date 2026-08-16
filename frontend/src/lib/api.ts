@@ -67,6 +67,8 @@ export interface Notification {
   report_id: number;
   report_title: string;
   report_type: Report["type"];
+  /** "nearby": created near your home/work. "popular": your report passed the upvote threshold. */
+  kind: "nearby" | "popular";
   is_read: boolean;
   created_at: string;
 }

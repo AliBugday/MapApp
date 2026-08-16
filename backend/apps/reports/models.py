@@ -50,6 +50,11 @@ class Report(models.Model):
     location = gis_models.PointField(geography=True, srid=4326)
 
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    # One-shot latch for the "this report is getting popular" notification: without it,
+    # every upvote past the threshold would notify the author again. Lives on Report,
+    # not Notification, because it's "has this report already crossed the line," not a
+    # property of any one notification row.
+    popular_notified = models.BooleanField(default=False)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

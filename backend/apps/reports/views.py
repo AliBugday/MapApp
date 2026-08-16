@@ -9,7 +9,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthentic
 from rest_framework.response import Response
 
 from apps.accounts.models import Organization
-from apps.notifications.services import notify_nearby_users
+from apps.notifications.services import notify_if_report_is_popular, notify_nearby_users
 
 from .models import EventRSVP, Report, ReportImage, Upvote
 from .serializers import (
@@ -176,6 +176,9 @@ class ReportViewSet(
         Events use RSVP instead — the two would otherwise mean the same thing ("I care
         about this") for that type, so upvote is rejected there rather than left as a
         redundant second signal.
+
+        Also the trigger point for the "this report is getting popular" notification —
+        see notify_if_report_is_popular for why it's checked here rather than via signal.
         """
         report = self.get_object()
         if report.type == Report.Type.EVENT:
@@ -188,6 +191,7 @@ class ReportViewSet(
         else:
             Upvote.objects.filter(report=report, user=request.user).delete()
             has_upvoted = False
+        notify_if_report_is_popular(report)
         return Response({"upvote_count": report.upvotes.count(), "has_upvoted": has_upvoted})
 
     @action(detail=True, methods=["post", "delete"])
