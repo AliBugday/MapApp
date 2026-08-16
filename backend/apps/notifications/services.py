@@ -34,5 +34,26 @@ def notify_nearby_users(report: Report) -> None:
     # Q(...) | Q(...) naturally dedupes: a user whose home *and* work both fall in
     # range still matches the filter once, since it's on User, not on the matched field.
     Notification.objects.bulk_create(
-        Notification(recipient=user, report=report) for user in candidates
+        Notification(recipient=user, report=report, kind=Notification.Kind.NEARBY)
+        for user in candidates
     )
+
+
+def notify_if_report_is_popular(report: Report) -> None:
+    """Tell a report's author the first time its upvote count reaches the threshold.
+
+    The threshold is inclusive — reaching it triggers the notification, not just
+    exceeding it. report.popular_notified is the idempotency guard: without it, every
+    upvote past the threshold (the 4th, 5th, ...) would notify the author again.
+    Reading the threshold from settings rather than at import time mirrors
+    notify_nearby_users, so tests can override POPULARITY_UPVOTE_THRESHOLD per-test.
+    """
+    if report.popular_notified or report.author_id is None:
+        return
+    if report.upvotes.count() < settings.POPULARITY_UPVOTE_THRESHOLD:
+        return
+    Notification.objects.create(
+        recipient=report.author, report=report, kind=Notification.Kind.POPULAR
+    )
+    report.popular_notified = True
+    report.save(update_fields=["popular_notified"])

@@ -124,8 +124,10 @@ export default function NotificationBell() {
                     {notification.report_title}
                   </Link>
                   <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-                    Yakınınızda: {TYPE_LABELS[notification.report_type]} ·{" "}
-                    {new Date(notification.created_at).toLocaleDateString("tr-TR")}
+                    {notification.kind === "popular"
+                      ? "İlinizde Popüler!"
+                      : `Yakınınızda: ${TYPE_LABELS[notification.report_type]}`}{" "}
+                    · {new Date(notification.created_at).toLocaleDateString("tr-TR")}
                   </div>
                 </li>
               ))}
