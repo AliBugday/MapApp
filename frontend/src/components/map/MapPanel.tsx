@@ -26,7 +26,8 @@ const ReportMap = dynamic(() => import("./ReportMap"), {
   loading: () => <p style={{ padding: "1rem", color: "var(--muted)" }}>Harita yükleniyor…</p>,
 });
 
-const ISTANBUL: LatLng = { latitude: 41.0082, longitude: 28.9784 };
+// Çankaya / Kızılay — matches CENTER in backend/apps/reports/management/commands/seed_demo_data.py.
+const DEFAULT_CENTER: LatLng = { latitude: 39.91, longitude: 32.855 };
 
 export default function MapPanel() {
   const {
@@ -202,7 +203,7 @@ export default function MapPanel() {
           pending={pending}
           onMapClick={handleMapClick}
           onToggleUpvote={handleToggleUpvote}
-          center={ISTANBUL}
+          center={DEFAULT_CENTER}
           zoom={13}
           onBoundsChange={setBbox}
           homeLocation={homeLocation}
