@@ -4,15 +4,17 @@ from django.db import models
 
 
 class Organization(models.Model):
-    """A government body allowed to post announcements and events.
+    """A body allowed to post announcements and events.
 
-    Kept to municipality/public-institution kinds only — this demo is framed around
-    government organizations, not private companies.
+    Two kinds: municipalities, and a broader institution/community catch-all covering
+    ministries, universities, university clubs, and NGOs (e.g. Kızılay). Individual
+    organizations within that catch-all are told apart on the map by their own logo
+    (see Report.organization_logo_url), not by a finer-grained kind.
     """
 
     class Kind(models.TextChoices):
         MUNICIPALITY = "municipality", "Belediye"
-        PUBLIC = "public", "Kamu kurumu"
+        INSTITUTION = "institution", "Kurum / Topluluk"
 
     name = models.CharField(max_length=120, unique=True)
     kind = models.CharField(max_length=20, choices=Kind.choices)

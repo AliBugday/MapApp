@@ -36,7 +36,7 @@ def test_municipality_member_can_change_status(org_client, other_user):
 
 @pytest.mark.django_db
 def test_non_municipality_org_member_cannot_change_status(other_user):
-    org = create_organization(name="Bir Kamu Kurumu", kind=Organization.Kind.PUBLIC)
+    org = create_organization(name="Bir Kamu Kurumu", kind=Organization.Kind.INSTITUTION)
     public_org_user = User.objects.create_user(
         username="public-org-member", password=PASSWORD, organization=org
     )
