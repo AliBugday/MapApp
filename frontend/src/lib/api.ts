@@ -54,7 +54,7 @@ export interface User {
   username: string;
   email: string;
   organization_name: string | null;
-  organization_kind: "municipality" | "public" | null;
+  organization_kind: "municipality" | "institution" | null;
   /** Private — only ever present on the signed-in user's own record. */
   home_latitude: number | null;
   home_longitude: number | null;
