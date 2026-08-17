@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ValidationError
 
 from apps.accounts.models import Organization, User
 
@@ -44,7 +45,7 @@ def test_direct_self_parent_is_rejected():
     org = create_organization(name="Kızılay")
     org.parent = org
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         org.full_clean()
 
 
@@ -55,5 +56,5 @@ def test_three_level_cycle_is_rejected():
     c = create_organization(name="C", kind=Organization.Kind.INSTITUTION, parent=b)
     a.parent = c
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         a.full_clean()
