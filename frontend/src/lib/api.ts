@@ -252,8 +252,12 @@ export function createComment(reportId: number, body: string): Promise<Comment> 
   });
 }
 
-export function fetchReports(): Promise<Paginated<Report>> {
-  return apiFetch<Paginated<Report>>("/api/reports/");
+export function fetchReports(options?: {
+  bbox?: string;
+  signal?: AbortSignal;
+}): Promise<Paginated<Report>> {
+  const query = options?.bbox ? `?bbox=${encodeURIComponent(options.bbox)}` : "";
+  return apiFetch<Paginated<Report>>(`/api/reports/${query}`, { signal: options?.signal });
 }
 
 export function createReport(input: {

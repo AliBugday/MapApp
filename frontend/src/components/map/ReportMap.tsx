@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -34,6 +35,32 @@ function ClickHandler({ onMapClick }: { onMapClick: (position: LatLng) => void }
   return null;
 }
 
+// "minLng,minLat,maxLng,maxLat" — exactly what the backend's parse_bbox() expects.
+// Padded 20% so a small pan within the current view doesn't immediately reveal an empty
+// edge before the next fetch lands.
+function boundsToBbox(bounds: L.LatLngBounds): string {
+  const padded = bounds.pad(0.2);
+  const sw = padded.getSouthWest();
+  const ne = padded.getNorthEast();
+  return `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`;
+}
+
+function BoundsHandler({ onBoundsChange }: { onBoundsChange: (bbox: string) => void }) {
+  // In Leaflet a zoom also ends with moveend, so this one listener covers both pan and
+  // zoom without double-firing.
+  const map = useMapEvents({
+    moveend() {
+      onBoundsChange(boundsToBbox(map.getBounds()));
+    },
+  });
+  useEffect(() => {
+    onBoundsChange(boundsToBbox(map.getBounds()));
+    // Only ever the initial view — moveend above covers every change after mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 // Fixed, built once — unlike report pins there are at most two of these and they change
 // rarely, so markerIcon.ts's per-render caching machinery would be overkill here.
 const HOME_ICON = L.divIcon({
@@ -58,6 +85,7 @@ export default function ReportMap({
   zoom,
   homeLocation,
   workLocation,
+  onBoundsChange,
 }: ReportMapProps) {
   return (
     <MapContainer
@@ -70,6 +98,7 @@ export default function ReportMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ClickHandler onMapClick={onMapClick} />
+      <BoundsHandler onBoundsChange={onBoundsChange} />
 
       {reports.map((report) => {
         const isPastEvent =

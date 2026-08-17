@@ -21,4 +21,7 @@ export interface ReportMapProps {
   /** The signed-in user's own home/work points, private — never another user's. */
   homeLocation?: LatLng | null;
   workLocation?: LatLng | null;
+  /** Fired on mount and on every pan/zoom with the current viewport as
+   * "minLng,minLat,maxLng,maxLat" — what the backend's ?bbox= param expects. */
+  onBoundsChange: (bbox: string) => void;
 }
