@@ -14,6 +14,9 @@ export interface PinInput {
   /** type="event" whose event_ends_at has passed. Computed by the caller (needs Date.now()),
    * not here, so the cache-key function stays a pure function of its visual inputs. */
   isPastEvent?: boolean;
+  /** The authoring organization's logo, if one has been uploaded. Rendered opposite the
+   * upvote badge (top-left) so the pin identifies *who* posted it, not just what type it is. */
+  organizationLogoUrl?: string | null;
 }
 
 const RESOLVED_RING = "#9aa4b2";
@@ -40,6 +43,7 @@ function keyFor(pin: PinInput): string {
     pin.comment_count,
     pin.thumbnailUrl ?? "",
     pin.isPastEvent ?? false,
+    pin.organizationLogoUrl ?? "",
   ].join("|");
 }
 
@@ -69,13 +73,19 @@ export function iconFor(pin: PinInput): L.DivIcon {
   // carries no injectable user input. A photo covers the whole rotated shape (head + tail,
   // via .pin-drop-inner's counter-rotation), so it visually continues into the tail; the
   // glyph is a small centred emoji that never stretches, so it only ever reads as sitting
-  // in the head — no special-casing needed for that difference.
+  // in the head — no special-casing needed for that difference. organizationLogoUrl below
+  // is the same kind of value as thumbnailUrl — our own server-generated /media/ URL, never
+  // user text — so it's XSS-safe by the identical argument.
   const centerHtml = pin.thumbnailUrl
     ? `<img src="${pin.thumbnailUrl}" alt="" class="pin-photo" />`
     : `<span class="pin-glyph">${TYPE_GLYPHS[pin.type]}</span>`;
 
   const badgeHtml =
     pin.upvote_count > 0 ? `<span class="pin-badge">${pin.upvote_count}</span>` : "";
+
+  const orgLogoHtml = pin.organizationLogoUrl
+    ? `<img src="${pin.organizationLogoUrl}" alt="" class="pin-org-logo" />`
+    : "";
 
   // Positioned with `top`, not `bottom`: the wrapper is now taller than the head (it
   // includes the tail), so `bottom` would anchor near the tail tip instead of the head.
@@ -93,6 +103,7 @@ export function iconFor(pin: PinInput): L.DivIcon {
         <div class="pin-drop-inner">${centerHtml}</div>
       </div>
       ${badgeHtml}
+      ${orgLogoHtml}
       ${cornerHtml}
     </div>
   `;

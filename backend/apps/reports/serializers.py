@@ -68,6 +68,7 @@ class ReportSerializer(serializers.ModelSerializer):
     organization_parent_name = serializers.CharField(
         source="author.organization.parent.name", read_only=True, allow_null=True
     )
+    organization_logo_url = serializers.SerializerMethodField()
     upvote_count = serializers.SerializerMethodField()
     comment_count = serializers.SerializerMethodField()
     has_upvoted = serializers.SerializerMethodField()
@@ -91,6 +92,7 @@ class ReportSerializer(serializers.ModelSerializer):
             "author_username",
             "organization_name",
             "organization_parent_name",
+            "organization_logo_url",
             "upvote_count",
             "comment_count",
             "has_upvoted",
@@ -101,6 +103,18 @@ class ReportSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "status", "created_at", "updated_at"]
+
+    def get_organization_logo_url(self, obj) -> str | None:
+        # Not a dotted CharField(source=...): an org with no logo yet has `logo` as an
+        # empty FileField (not None), and `.url` on an empty FileField raises ValueError,
+        # which DRF's null-safe dotted-source resolution only catches AttributeError
+        # for — that would 500 on every org that hasn't had a logo uploaded, i.e. most of
+        # them on day one. Guarding organization presence and `logo` truthiness here
+        # avoids that trap entirely.
+        organization = getattr(obj.author, "organization", None) if obj.author_id else None
+        if organization is None or not organization.logo:
+            return None
+        return organization.logo.url
 
     def get_upvote_count(self, obj) -> int:
         # Annotated by the viewset on list/retrieve; absent on a just-created instance.

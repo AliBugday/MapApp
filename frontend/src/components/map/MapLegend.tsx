@@ -49,6 +49,9 @@ export default function MapLegend() {
       <div style={{ marginTop: "0.35rem", color: "var(--muted)" }}>
         Boyut = ilgi (oy + yorum) · ✓ çözüldü · 🔒 yalnızca üyelere
       </div>
+      <div style={{ marginTop: "0.15rem", color: "var(--muted)" }}>
+        Sol üstteki logo · paylaşan kurum
+      </div>
     </div>
   );
 }
