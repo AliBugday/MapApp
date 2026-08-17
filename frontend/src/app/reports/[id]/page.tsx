@@ -161,7 +161,11 @@ export default function ReportDetailPage() {
                 : report.visibility === "members"
                   ? " · Yalnızca üyelere"
                   : " · Herkese açık"}
-              {report.organization_name ? ` · ${report.organization_name}` : ""}
+              {report.organization_name
+                ? ` · ${report.organization_name}${
+                    report.organization_parent_name ? ` · ${report.organization_parent_name}` : ""
+                  }`
+                : ""}
               {report.author_username ? ` · bildiren: ${report.author_username}` : ""} ·{" "}
               {new Date(report.created_at).toLocaleDateString()}
             </p>

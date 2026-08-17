@@ -61,6 +61,13 @@ class ReportSerializer(serializers.ModelSerializer):
     organization_name = serializers.CharField(
         source="author.organization.name", read_only=True, allow_null=True
     )
+    # One hop up only, matching what the frontend renders ("Club · University"), not the
+    # full ancestry — DRF's dotted-source resolution catches AttributeError at every hop,
+    # so this is null-safe whether the report has no author, the author has no
+    # organization, or the organization has no parent.
+    organization_parent_name = serializers.CharField(
+        source="author.organization.parent.name", read_only=True, allow_null=True
+    )
     upvote_count = serializers.SerializerMethodField()
     comment_count = serializers.SerializerMethodField()
     has_upvoted = serializers.SerializerMethodField()
@@ -83,6 +90,7 @@ class ReportSerializer(serializers.ModelSerializer):
             "longitude",
             "author_username",
             "organization_name",
+            "organization_parent_name",
             "upvote_count",
             "comment_count",
             "has_upvoted",
