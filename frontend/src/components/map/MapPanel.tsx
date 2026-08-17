@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
 import {
@@ -42,19 +42,38 @@ export default function MapPanel() {
   const [pending, setPending] = useState<LatLng | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // null until the map reports its first viewport — the fetch below waits for that
+  // rather than guessing at a bbox, so it never issues an unbounded "everything" query.
+  const [bbox, setBbox] = useState<string | null>(null);
 
   useEffect(() => {
     // has_upvoted is per-user, so a fetch taken while signed in as one user is wrong for
     // the next: refetch whenever the signed-in identity changes, not just once at mount.
     // Waiting for userLoading also skips an extra anonymous-then-authenticated round trip
     // for a visitor who is already signed in on page load.
-    if (userLoading) return;
-    setLoading(true);
-    fetchReports()
-      .then((page) => setReports(page.results))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [userLoading, user?.id]);
+    if (userLoading || bbox === null) return;
+
+    const controller = new AbortController();
+    // Debounced, not the moveend listener itself — a fast pan/zoom fires many bounds
+    // updates in a row, and only the settled one should trigger a request.
+    const timer = setTimeout(() => {
+      setLoading(true);
+      fetchReports({ bbox, signal: controller.signal })
+        .then((page) => setReports(page.results))
+        .catch((err: Error) => {
+          // A pan that lands before the previous fetch's response arrives aborts that
+          // older request — its rejection is expected, not a real failure to surface.
+          if (err.name === "AbortError") return;
+          setError(err.message);
+        })
+        .finally(() => setLoading(false));
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [userLoading, user?.id, bbox]);
 
   // Location picking is armed from the header, not here — this just yields to it: only
   // one "click the map to do X" mode makes sense at a time.
@@ -166,8 +185,6 @@ export default function MapPanel() {
     [user, reports],
   );
 
-  const center = useMemo(() => reports[0] ?? ISTANBUL, [reports]);
-
   const homeLocation =
     user?.home_latitude != null && user?.home_longitude != null
       ? { latitude: user.home_latitude, longitude: user.home_longitude }
@@ -185,8 +202,9 @@ export default function MapPanel() {
           pending={pending}
           onMapClick={handleMapClick}
           onToggleUpvote={handleToggleUpvote}
-          center={center}
+          center={ISTANBUL}
           zoom={13}
+          onBoundsChange={setBbox}
           homeLocation={homeLocation}
           workLocation={workLocation}
         />
