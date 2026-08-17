@@ -26,6 +26,11 @@ class Organization(models.Model):
     parent = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
     )
+    # Uploaded by hand through Django admin, never seeded — with ~8 organizations the same
+    # handful of logo URLs get reused across every pin and cached by the browser after
+    # first paint, so there's no derivative/thumbnail field here. Served at original size;
+    # revisit only if a real uploaded logo turns out to be multi-megabyte.
+    logo = models.ImageField(upload_to="organizations/", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

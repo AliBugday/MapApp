@@ -20,6 +20,8 @@ export interface Report {
   organization_name: string | null;
   /** One hop up only, e.g. the university that a club belongs to. */
   organization_parent_name: string | null;
+  /** null until an admin uploads a logo for the authoring organization. */
+  organization_logo_url: string | null;
   upvote_count: number;
   comment_count: number;
   /** Whether the *current* user has upvoted; always present, false when anonymous. */

@@ -11,5 +11,9 @@ class UserAdmin(DjangoUserAdmin):
     list_display = DjangoUserAdmin.list_display + ("organization",)
 
 
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("name", "kind", "parent")
+
+
 admin.site.register(User, UserAdmin)
-admin.site.register(Organization)
+admin.site.register(Organization, OrganizationAdmin)

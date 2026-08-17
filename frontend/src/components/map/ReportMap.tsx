@@ -89,6 +89,7 @@ export default function ReportMap({
               comment_count: report.comment_count,
               thumbnailUrl: report.images[0]?.thumbnail_url,
               isPastEvent,
+              organizationLogoUrl: report.organization_logo_url,
             })}
           >
             <Tooltip direction="top" offset={[0, -6]}>
