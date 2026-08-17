@@ -103,7 +103,12 @@ export default function ReportMap({
                       ? " · Yalnızca üyelere"
                       : ""}
               </div>
-              {report.organization_name && <div>{report.organization_name}</div>}
+              {report.organization_name && (
+                <div>
+                  {report.organization_name}
+                  {report.organization_parent_name ? ` · ${report.organization_parent_name}` : ""}
+                </div>
+              )}
               <div>
                 ▲ {report.upvote_count} · 💬 {report.comment_count}
               </div>

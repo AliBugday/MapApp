@@ -105,7 +105,7 @@ class ReportViewSet(
         # upvotes, 4 comments and 2 rsvps would otherwise report inflated, mutually-multiplied
         # totals for each.
         queryset = (
-            Report.objects.select_related("author__organization")
+            Report.objects.select_related("author__organization__parent")
             .prefetch_related("images")
             .annotate(
                 upvote_count=Count("upvotes", distinct=True),
