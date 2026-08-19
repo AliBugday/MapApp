@@ -12,13 +12,16 @@ from .factories import uploaded_image
 
 @pytest.fixture
 def photo_dir(tmp_path, monkeypatch):
-    """Points the command at a throwaway directory with one fixture photo under a real
+    """Points the command at throwaway directories with one fixture photo under a real
     seeded filename, so a photo attaches deterministically regardless of which (if any)
-    real photos the user has downloaded into the actual seed_data/photos folder."""
+    real photos/logos the user has downloaded into the actual seed_data folders. LOGO_DIR
+    is left empty on purpose — logo attachment then always hits the "not found" branch,
+    which is exactly what the persistence test below relies on."""
     photos = tmp_path / "photos"
     photos.mkdir()
     (photos / "kaldirim-cukur.jpg").write_bytes(uploaded_image().read())
     monkeypatch.setattr(seed_demo_data, "PHOTO_DIR", photos)
+    monkeypatch.setattr(seed_demo_data, "LOGO_DIR", tmp_path / "logos")
     return photos
 
 

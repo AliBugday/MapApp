@@ -25,11 +25,24 @@ from apps.reports.serializers import ReportSerializer
 
 PASSWORD = "demo12345678"
 
-# Not MEDIA_ROOT (gitignored, shadowed by the media_data volume) — a plain committed
-# folder, visible in-container via the existing ./backend:/app bind mount. A module-level
-# constant, not a settings value, so tests can monkeypatch it to a tmp dir with a fixture
-# photo rather than depending on which real photos the user has downloaded.
+# Not MEDIA_ROOT (gitignored, shadowed by the media_data volume) — plain committed folders,
+# visible in-container via the existing ./backend:/app bind mount. Module-level constants,
+# not settings values, so tests can monkeypatch them to a tmp dir with a fixture file rather
+# than depending on which real photos/logos the user has downloaded.
 PHOTO_DIR = Path(settings.BASE_DIR) / "seed_data" / "photos"
+LOGO_DIR = Path(settings.BASE_DIR) / "seed_data" / "logos"
+
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+
+
+def _find_image(stem: str, directory: Path) -> Path | None:
+    """Downloaded images commonly come as .jpeg/.png/.webp — try the documented stem under
+    each extension rather than forcing a rename/convert step on the user."""
+    for ext in IMAGE_EXTENSIONS:
+        path = directory / f"{stem}{ext}"
+        if path.exists():
+            return path
+    return None
 
 # Çankaya / Kızılay. (latitude, longitude) — matches PLACES below, not PostGIS's (x, y).
 CENTER = (39.9100, 32.8550)
@@ -50,49 +63,93 @@ PLACES = {
     "dikmen": (39.8700, 32.8400),
 }
 
-# (name, kind, parent name or None, username for the one member user seeded for it).
-# Listed parents-before-children so a single pass can resolve `parent` by name.
+# (name, kind, parent name or None, username for the one member user seeded for it, logo
+# filename or None). Listed parents-before-children so a single pass can resolve `parent`.
 ORGANIZATIONS = [
-    ("Ankara Büyükşehir Belediyesi", Organization.Kind.MUNICIPALITY, None, "seed-abb"),
+    (
+        "Ankara Büyükşehir Belediyesi",
+        Organization.Kind.MUNICIPALITY,
+        None,
+        "ankara.buyuksehir.belediyesi",
+        "ankara-buyuksehir-belediyesi.png",
+    ),
     (
         "Çankaya Belediyesi",
         Organization.Kind.MUNICIPALITY,
         "Ankara Büyükşehir Belediyesi",
-        "seed-cankaya",
+        "cankaya.belediyesi",
+        "cankaya-belediyesi.png",
     ),
-    ("Türk Kızılay", Organization.Kind.INSTITUTION, None, "seed-kizilay"),
+    (
+        "Türk Kızılay",
+        Organization.Kind.INSTITUTION,
+        None,
+        "turk.kizilay",
+        "turk-kizilay.png",
+    ),
     (
         "Türk Kızılay Çankaya Şubesi",
         Organization.Kind.INSTITUTION,
         "Türk Kızılay",
-        "seed-kizilay-cankaya",
+        "turk.kizilay.cankaya",
+        "turk-kizilay-cankaya.png",
     ),
-    ("Milli Eğitim Bakanlığı", Organization.Kind.INSTITUTION, None, "seed-meb"),
+    (
+        "Milli Eğitim Bakanlığı",
+        Organization.Kind.INSTITUTION,
+        None,
+        "milli.egitim.bakanligi",
+        "milli-egitim-bakanligi.png",
+    ),
     (
         "Hacettepe Üniversitesi",
         Organization.Kind.INSTITUTION,
         "Milli Eğitim Bakanlığı",
-        "seed-hacettepe",
+        "hacettepe.universitesi",
+        "hacettepe-universitesi.png",
     ),
     (
         "HÜ Dağcılık Kulübü",
         Organization.Kind.INSTITUTION,
         "Hacettepe Üniversitesi",
-        "seed-hu-dagcilik",
+        "hu.dagcilik.kulubu",
+        "hu-dagcilik-kulubu.png",
     ),
     (
         "HÜ Tiyatro Kulübü",
         Organization.Kind.INSTITUTION,
         "Hacettepe Üniversitesi",
-        "seed-hu-tiyatro",
+        "hu.tiyatro.kulubu",
+        "hu-tiyatro-kulubu.png",
     ),
-    ("AFAD Ankara", Organization.Kind.INSTITUTION, None, "seed-afad"),
-    ("Ankara İl Sağlık Müdürlüğü", Organization.Kind.INSTITUTION, None, "seed-saglik"),
+    (
+        "AFAD Ankara",
+        Organization.Kind.INSTITUTION,
+        None,
+        "afad.ankara",
+        "afad-ankara.png",
+    ),
+    (
+        "Ankara İl Sağlık Müdürlüğü",
+        Organization.Kind.INSTITUTION,
+        None,
+        "ankara.il.saglik",
+        "ankara-il-saglik.png",
+    ),
 ]
 
-CITIZEN_USERNAMES = [f"seed-citizen-{i}" for i in range(1, 9)]
+CITIZEN_USERNAMES = [
+    "mehmet.ozturk",
+    "fatma.celik",
+    "can.gunes",
+    "derya.tas",
+    "onur.bulut",
+    "esra.aydogan",
+    "berk.sahin",
+    "nazli.uzun",
+]
 
-SEED_USERNAMES = [username for *_rest, username in ORGANIZATIONS] + CITIZEN_USERNAMES
+SEED_USERNAMES = [username for *_rest, username, _logo in ORGANIZATIONS] + CITIZEN_USERNAMES
 
 COMMENT_BODIES = [
     "Bizim sokakta da aynı sorun var.",
@@ -105,98 +162,98 @@ COMMENT_BODIES = [
 
 ISSUES = [
     dict(
-        title="Kaldırımda çukur",
+        title="Kaldırımda koca bir çukur var",
         place="sakarya_caddesi",
-        description="Sakarya Caddesi üzerinde yayaların takılıp düştüğü derin bir çukur var.",
+        description="Sakarya Caddesi'nde yürürken az kalsın düşüyordum, derin bir çukur var.",
         photo="kaldirim-cukur.jpg",
         upvotes=8,
         comments=4,
         resolved=True,
     ),
     dict(
-        title="Sokak lambası yanmıyor",
+        title="Sokak lambası günlerdir yanmıyor",
         place="ayranci",
-        description="İki haftadır yanmıyor, akşamları sokak çok karanlık kalıyor.",
+        description="İki haftadır kapkaranlık burası, akşamları geçmek biraz ürkütücü oluyor.",
         photo="sokak-lambasi.jpg",
         upvotes=5,
         comments=2,
     ),
     dict(
-        title="Çöp konteyneri taşmış",
+        title="Çöp konteyneri taşmış, koku berbat",
         place="kolej",
-        description="Konteyner günlerdir boşaltılmadı, çevreye koku yayılıyor.",
+        description="Konteyner günlerdir boşaltılmamış, koku her yere yayılmış durumda.",
         photo="cop-konteyneri.jpg",
         upvotes=3,
         comments=1,
     ),
     dict(
-        title="Tıkalı yağmur mazgalı, su birikintisi",
+        title="Mazgal tıkalı, yağmurda göl oluyor",
         place="sihhiye",
-        description="Yağmur sonrası kaldırımda uzun süre su birikiyor.",
+        description="Yağınca kaldırım göle dönüyor, ayakkabı ıslatmadan geçmek imkansız.",
         photo="yagmur-mazgali.jpg",
         upvotes=2,
         comments=0,
     ),
     dict(
-        title="Kırık park bankı",
+        title="Parktaki bank kırık",
         place="kugulu_park",
-        description="Oturma yeri kırık, oturmaya çalışan biri yaralanabilir.",
+        description="Oturma yeri kırılmış, fark etmeden oturan biri yaralanabilir gibi duruyor.",
         photo="park-banki.jpg",
         upvotes=1,
         comments=1,
     ),
     dict(
-        title="Kaçak afiş kirliliği",
+        title="Her yer kaçak afiş dolmuş",
         place="tunali_hilmi",
-        description="Direklere ve duvarlara izinsiz afişler yapıştırılmış.",
+        description="Direkler duvarlar afişten geçilmiyor, kim izin veriyor bunlara bilmiyorum.",
         photo="kacak-afis.jpg",
         upvotes=0,
         comments=0,
     ),
     dict(
-        title="Devrilmiş trafik levhası",
+        title="Trafik lambasi devrilmiş.",
         place="maltepe",
-        description="Rüzgardan devrilen levha kaldırımı kapatıyor.",
+        description="Lambda kaldırımın tam ortasında yatıyor.",
         photo="trafik-levhasi.jpg",
         upvotes=4,
         comments=1,
     ),
     dict(
-        title="Silinmiş yaya geçidi çizgileri",
+        title="Yaya geçidi çizgileri görünmüyor artık",
         place="kizilay_meydani",
-        description="Çizgiler o kadar silik ki sürücüler geçidi fark etmiyor.",
+        description="Çizgiler o kadar silik ki sürücüler geçidi fark etmiyor, geçerken korkuyorum.",
         photo="yaya-gecidi.jpg",
         upvotes=6,
         comments=2,
     ),
     dict(
-        title="Kaldırım işgali, araç park etmiş",
+        title="Araçlar kaldırımı komple kapatmış",
         place="tunali_hilmi",
-        description="Araç kaldırımın tamamını kapatmış, yayalar yola inmek zorunda kalıyor.",
+        description="Yayalar yola inmek zorunda kalıyor.",
         photo="kaldirim-isgali.jpg",
         upvotes=2,
         comments=0,
     ),
     dict(
-        title="Metro istasyonunda asansör arızalı",
+        title="Metroda asansör yine bozuk",
         place="kizilay_meydani",
-        description="Engelli ve yaşlı yolcular için tek giriş olan asansör bozuk.",
+        description="Tek giriş olan asansör çalışmıyor, engelli ve yaşlılar için resmen çile.",
         photo="metro-asansor.jpg",
         upvotes=9,
         comments=3,
     ),
     dict(
-        title="Başıboş sokak hayvanı bildirimi",
+        title="Bir gurup kopek yollari kapatiyor",
         place="dikmen",
-        description="Yaralı görünen bir sokak köpeği var, veteriner desteği gerekebilir.",
+        description="Vatandaslar yanlarindan gecmekten korkuyor.",
         photo="sokak-hayvani.jpg",
         upvotes=3,
         comments=2,
     ),
     dict(
-        title="Parkta kırık aydınlatma",
+        title="Parkın lambaları kırık, akşam zifiri karanlık",
         place="segmenler_parki",
-        description="Yürüyüş yolundaki lambalardan birkaçı kırık, akşam karanlık kalıyor.",
+        description="Yürüyüş yolundaki lambaların birkaçı kırık, akşamları göz gözü görmüyor.",
         photo="park-aydinlatma.jpg",
         upvotes=1,
         comments=0,
@@ -208,6 +265,7 @@ REQUESTS = [
         title="Yeni bisiklet yolu talebi",
         place="atakule",
         description="Bu bölgede güvenli bir bisiklet şeridi bulunmuyor.",
+        photo="bisiklet-yolu.jpg",
         upvotes=6,
         comments=2,
     ),
@@ -222,6 +280,7 @@ REQUESTS = [
         title="Yaya geçidine sinyalizasyon talebi",
         place="sakarya_caddesi",
         description="Trafiğin yoğun olduğu bu geçitte ışıklı sinyalizasyon gerekli.",
+        photo="yaya-sinyalizasyon.jpg",
         upvotes=7,
         comments=3,
     ),
@@ -229,6 +288,7 @@ REQUESTS = [
         title="Engelli rampası talebi",
         place="kolej",
         description="Kaldırımda rampa olmadığı için tekerlekli sandalyeyle geçmek imkansız.",
+        photo="engelli-rampasi.jpg",
         upvotes=5,
         comments=1,
     ),
@@ -236,6 +296,7 @@ REQUESTS = [
         title="Ağaçlandırma / yeşil alan talebi",
         place="anitkabir",
         description="Boş arazi ağaçlandırılırsa mahalleye hem gölge hem yeşil alan kazandırır.",
+        photo="agaclandirma.jpg",
         upvotes=1,
         comments=0,
     ),
@@ -250,6 +311,7 @@ REQUESTS = [
         title="Sokak hayvanları için besleme ünitesi talebi",
         place="maltepe",
         description="Mahalledeki sokak hayvanları için sabit bir mama/su istasyonu istiyoruz.",
+        photo="besleme-istasyonu.jpg",
         upvotes=0,
         comments=0,
     ),
@@ -261,7 +323,8 @@ EVENTS = [
         title="Gençlik Parkı açık hava konseri",
         place="genclik_parki",
         description="Yerel gruplarla açık hava konseri, herkes davetli.",
-        organization="seed-cankaya",
+        photo="konser-afisi.jpg",
+        organization="cankaya.belediyesi",
         starts_in_days=10,
         duration_hours=3,
         rsvps=6,
@@ -270,7 +333,8 @@ EVENTS = [
         title="Kan bağışı kampanyası",
         place="guvenpark",
         description="Türk Kızılay Çankaya Şubesi kan bağışı standı kuruyor.",
-        organization="seed-kizilay-cankaya",
+        photo="kan-bagisi.jpg",
+        organization="turk.kizilay.cankaya",
         starts_in_days=5,
         duration_hours=6,
         rsvps=4,
@@ -279,7 +343,8 @@ EVENTS = [
         title="Doğa yürüyüşü",
         place="segmenler_parki",
         description="Seğmenler Parkı'ndan başlayan, orta zorlukta bir doğa yürüyüşü.",
-        organization="seed-hu-dagcilik",
+        photo="doga-yuruyusu.jpg",
+        organization="hu.dagcilik.kulubu",
         starts_in_days=14,
         duration_hours=4,
         rsvps=3,
@@ -288,7 +353,8 @@ EVENTS = [
         title="Tiyatro gösterimi",
         place="sihhiye",
         description="Kulüp üyelerinin sahnelediği tek perdelik oyun.",
-        organization="seed-hu-tiyatro",
+        photo="tiyatro-gosterimi.jpg",
+        organization="hu.tiyatro.kulubu",
         starts_in_days=7,
         duration_hours=2,
         rsvps=2,
@@ -298,7 +364,8 @@ EVENTS = [
         title="Deprem tatbikatı",
         place="dikmen",
         description="AFAD koordinasyonunda mahalle deprem tatbikatı.",
-        organization="seed-afad",
+        photo="deprem-tatbikati.jpg",
+        organization="afad.ankara",
         starts_in_days=-5,
         duration_hours=3,
         rsvps=5,
@@ -310,25 +377,27 @@ ANNOUNCEMENTS = [
         title="Su kesintisi duyurusu",
         place="guvenpark",
         description="Bakım çalışması nedeniyle yarın 09:00-17:00 arası su kesintisi olacaktır.",
-        organization="seed-abb",
+        organization="ankara.buyuksehir.belediyesi",
     ),
     dict(
-        title="Yol çalışması / güzergah değişikliği",
+        title="Kaldırım tamirat çalışması duyurusu",
         place="tunali_hilmi",
-        description="Asfalt yenileme nedeniyle otobüs güzergahı geçici olarak değişmiştir.",
-        organization="seed-cankaya",
+        description="Tunalı Hilmi Caddesi'nde kaldırım yenileme çalışması yapılacaktır.",
+        photo="kaldirim-tamirat.jpg",
+        organization="cankaya.belediyesi",
     ),
     dict(
         title="Ücretsiz sağlık taraması",
         place="kolej",
         description="Bu hafta sonu mahallede ücretsiz genel sağlık taraması yapılacaktır.",
-        organization="seed-saglik",
+        photo="saglik-taramasi.jpg",
+        organization="ankara.il.saglik",
     ),
     dict(
-        title="Burs başvuruları başladı",
+        title="Kariyer günleri duyurusu",
         place="sihhiye",
-        description="2026-2027 akademik yılı burs başvuruları için son tarih yaklaşıyor.",
-        organization="seed-hacettepe",
+        description="Bu hafta kampüste kariyer günleri düzenlenecek, şirketler stant açacaktır.",
+        organization="hacettepe.universitesi",
     ),
 ]
 
@@ -356,8 +425,9 @@ class Command(BaseCommand):
                 # comments/upvotes/rsvps/images with them, AND a seed user's engagement on
                 # ANY report (their own author FK on Comment/Upvote/EventRSVP is also
                 # CASCADE) — so this is surgical even against non-seed reports they voted
-                # on. Organizations are never touched: their hand-uploaded logos must
-                # survive every reseed.
+                # on. Organizations are never deleted, since they're shared, hierarchical
+                # identity, not per-run report data; _create_organizations() below
+                # re-attaches each one's logo from LOGO_DIR on every run regardless.
                 deleted_count, _ = existing_seed_users.delete()
                 self.stdout.write(f"{deleted_count} nesne silindi.")
             elif existing_seed_users.exists():
@@ -376,21 +446,35 @@ class Command(BaseCommand):
 
     def _create_organizations(self) -> dict[str, Organization]:
         by_name: dict[str, Organization] = {}
-        for name, kind, parent_name, _username in ORGANIZATIONS:
+        for name, kind, parent_name, _username, logo in ORGANIZATIONS:
             parent = by_name[parent_name] if parent_name else None
             org, _created = Organization.objects.get_or_create(
                 name=name, defaults={"kind": kind, "parent": parent}
             )
+            self._attach_logo(org, logo)
             by_name[name] = org
         return by_name
 
     def _create_org_users(self, organizations: dict[str, Organization]) -> dict[str, User]:
         by_username: dict[str, User] = {}
-        for name, _kind, _parent_name, username in ORGANIZATIONS:
+        for name, _kind, _parent_name, username, _logo in ORGANIZATIONS:
             by_username[username] = User.objects.create_user(
                 username=username, password=PASSWORD, organization=organizations[name]
             )
         return by_username
+
+    def _attach_logo(self, organization: Organization, filename: str | None) -> None:
+        if not filename:
+            return
+        # Unlike report photos, a logo is seeded from a committed directory the user keeps
+        # up to date directly (see LOGO_DIR) — organizations persist across --flush, so this
+        # runs every time and simply overwrites with whatever the file currently holds.
+        path = _find_image(Path(filename).stem, LOGO_DIR)
+        if path is None:
+            self.stdout.write(self.style.WARNING(f"Logo bulunamadı, atlanıyor: {filename}"))
+            return
+        with path.open("rb") as fh:
+            organization.logo.save(path.name, File(fh), save=True)
 
     def _create_citizens(self) -> list[User]:
         return [
@@ -414,12 +498,21 @@ class Command(BaseCommand):
     def _attach_photo(self, report: Report, filename: str | None) -> None:
         if not filename:
             return
-        path = PHOTO_DIR / filename
-        if not path.exists():
+        # A report can carry more than one photo, added as "<stem>2.ext", "<stem>3.ext", ...
+        # alongside the bare "<stem>.ext" — attach all of them, not just the first match.
+        stem = Path(filename).stem
+        attached = 0
+        for suffix in ("", *(str(n) for n in range(2, 10))):
+            path = _find_image(f"{stem}{suffix}", PHOTO_DIR)
+            if path is None:
+                if suffix != "":
+                    break
+                continue
+            with path.open("rb") as fh:
+                ReportImage.objects.create(report=report, image=File(fh, name=path.name))
+            attached += 1
+        if not attached:
             self.stdout.write(self.style.WARNING(f"Fotoğraf bulunamadı, atlanıyor: {filename}"))
-            return
-        with path.open("rb") as fh:
-            ReportImage.objects.create(report=report, image=File(fh, name=filename))
 
     def _add_engagement(self, report: Report, citizens: list[User], *, upvotes=0, comments=0):
         for user in random.sample(citizens, min(upvotes, len(citizens))):
@@ -446,12 +539,14 @@ class Command(BaseCommand):
 
         for i, item in enumerate(REQUESTS):
             item = dict(item)
+            photo = item.pop("photo", None)
             upvotes = item.pop("upvotes", 0)
             comments = item.pop("comments", 0)
             author = citizens[(i + 3) % len(citizens)]
             report = self._seed_report(
                 author=author, type=Report.Type.REQUEST, age_days=i + 2, **item
             )
+            self._attach_photo(report, photo)
             self._add_engagement(report, citizens, upvotes=upvotes, comments=comments)
 
     def _create_events(self, org_users: dict[str, User], citizens: list[User]):
@@ -461,6 +556,7 @@ class Command(BaseCommand):
             starts_in_days = item.pop("starts_in_days")
             duration_hours = item.pop("duration_hours")
             rsvps = item.pop("rsvps", 0)
+            photo = item.pop("photo", None)
             starts_at = timezone.now() + timedelta(days=starts_in_days)
             ends_at = starts_at + timedelta(hours=duration_hours)
             author = org_users[organization_username]
@@ -471,6 +567,7 @@ class Command(BaseCommand):
                 event_ends_at=ends_at,
                 **item,
             )
+            self._attach_photo(report, photo)
             for user in random.sample(citizens, min(rsvps, len(citizens))):
                 EventRSVP.objects.create(report=report, user=user)
 
@@ -478,5 +575,7 @@ class Command(BaseCommand):
         for item in ANNOUNCEMENTS:
             item = dict(item)
             organization_username = item.pop("organization")
+            photo = item.pop("photo", None)
             author = org_users[organization_username]
-            self._seed_report(author=author, type=Report.Type.ANNOUNCEMENT, **item)
+            report = self._seed_report(author=author, type=Report.Type.ANNOUNCEMENT, **item)
+            self._attach_photo(report, photo)
