@@ -61,6 +61,17 @@ PLACES = {
     "anitkabir": (39.9250, 32.8369),
     "genclik_parki": (39.9375, 32.8500),
     "dikmen": (39.8700, 32.8400),
+    "kurtulus": (39.9065, 32.8773),
+    "yenisehir": (39.9228, 32.8684),
+    "dikimevi": (39.9193, 32.8868),
+    "ovecler": (39.8776, 32.8585),
+    "guvenpark_dogu": (39.9187, 32.8620),
+    "kolej_guneydogu": (39.9257, 32.8691),
+    "tunali_hilmi_guneydogu": (39.9092, 32.8651),
+    "sihhiye_guneybati": (39.9273, 32.8522),
+    "kizilay_bati": (39.9191, 32.8474),
+    "guvenpark_guney": (39.9115, 32.8510),
+    "beytepe_kampus": (39.8718, 32.7355),
 }
 
 # (name, kind, parent name or None, username for the one member user seeded for it, logo
@@ -163,7 +174,7 @@ COMMENT_BODIES = [
 ISSUES = [
     dict(
         title="Kaldırımda koca bir çukur var",
-        place="sakarya_caddesi",
+        place="sihhiye_guneybati",
         description="Sakarya Caddesi'nde yürürken az kalsın düşüyordum, derin bir çukur var.",
         photo="kaldirim-cukur.jpg",
         upvotes=8,
@@ -180,7 +191,7 @@ ISSUES = [
     ),
     dict(
         title="Çöp konteyneri taşmış, koku berbat",
-        place="kolej",
+        place="kolej_guneydogu",
         description="Konteyner günlerdir boşaltılmamış, koku her yere yayılmış durumda.",
         photo="cop-konteyneri.jpg",
         upvotes=3,
@@ -204,7 +215,7 @@ ISSUES = [
     ),
     dict(
         title="Her yer kaçak afiş dolmuş",
-        place="tunali_hilmi",
+        place="tunali_hilmi_guneydogu",
         description="Direkler duvarlar afişten geçilmiyor, kim izin veriyor bunlara bilmiyorum.",
         photo="kacak-afis.jpg",
         upvotes=0,
@@ -271,7 +282,7 @@ REQUESTS = [
     ),
     dict(
         title="Ek çöp kutusu talebi",
-        place="guvenpark",
+        place="kizilay_bati",
         description="Park girişinde çöp kutusu yok, ziyaretçiler çöpü yere bırakıyor.",
         upvotes=2,
         comments=0,
@@ -309,7 +320,7 @@ REQUESTS = [
     ),
     dict(
         title="Sokak hayvanları için besleme ünitesi talebi",
-        place="maltepe",
+        place="guvenpark_guney",
         description="Mahalledeki sokak hayvanları için sabit bir mama/su istasyonu istiyoruz.",
         photo="besleme-istasyonu.jpg",
         upvotes=0,
@@ -331,7 +342,7 @@ EVENTS = [
     ),
     dict(
         title="Kan bağışı kampanyası",
-        place="guvenpark",
+        place="guvenpark_dogu",
         description="Türk Kızılay Çankaya Şubesi kan bağışı standı kuruyor.",
         photo="kan-bagisi.jpg",
         organization="turk.kizilay.cankaya",
@@ -341,7 +352,7 @@ EVENTS = [
     ),
     dict(
         title="Doğa yürüyüşü",
-        place="segmenler_parki",
+        place="beytepe_kampus",
         description="Seğmenler Parkı'ndan başlayan, orta zorlukta bir doğa yürüyüşü.",
         photo="doga-yuruyusu.jpg",
         organization="hu.dagcilik.kulubu",
@@ -351,7 +362,7 @@ EVENTS = [
     ),
     dict(
         title="Tiyatro gösterimi",
-        place="sihhiye",
+        place="beytepe_kampus",
         description="Kulüp üyelerinin sahnelediği tek perdelik oyun.",
         photo="tiyatro-gosterimi.jpg",
         organization="hu.tiyatro.kulubu",
@@ -362,7 +373,7 @@ EVENTS = [
     ),
     dict(
         title="Deprem tatbikatı",
-        place="dikmen",
+        place="ovecler",
         description="AFAD koordinasyonunda mahalle deprem tatbikatı.",
         photo="deprem-tatbikati.jpg",
         organization="afad.ankara",
@@ -375,27 +386,27 @@ EVENTS = [
 ANNOUNCEMENTS = [
     dict(
         title="Su kesintisi duyurusu",
-        place="guvenpark",
+        place="yenisehir",
         description="Bakım çalışması nedeniyle yarın 09:00-17:00 arası su kesintisi olacaktır.",
         organization="ankara.buyuksehir.belediyesi",
     ),
     dict(
         title="Kaldırım tamirat çalışması duyurusu",
-        place="tunali_hilmi",
+        place="kurtulus",
         description="Tunalı Hilmi Caddesi'nde kaldırım yenileme çalışması yapılacaktır.",
         photo="kaldirim-tamirat.jpg",
         organization="cankaya.belediyesi",
     ),
     dict(
         title="Ücretsiz sağlık taraması",
-        place="kolej",
+        place="dikimevi",
         description="Bu hafta sonu mahallede ücretsiz genel sağlık taraması yapılacaktır.",
         photo="saglik-taramasi.jpg",
         organization="ankara.il.saglik",
     ),
     dict(
         title="Kariyer günleri duyurusu",
-        place="sihhiye",
+        place="beytepe_kampus",
         description="Bu hafta kampüste kariyer günleri düzenlenecek, şirketler stant açacaktır.",
         organization="hacettepe.universitesi",
     ),
