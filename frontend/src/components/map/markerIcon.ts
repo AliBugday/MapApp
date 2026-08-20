@@ -19,7 +19,9 @@ export interface PinInput {
   organizationLogoUrl?: string | null;
 }
 
-const RESOLVED_RING = "#9aa4b2";
+const PAST_EVENT_RING = "#9aa4b2";
+const ACCEPTED_RING = "#22c55e"; // in_progress (issue/request) — bright green
+const COMPLETED_RING = "#166534"; // resolved (issue/request) — dark green
 
 // The classic CSS "map pin" shape: a square with border-radius 50% 50% 50% 0 (three
 // rounded corners, one sharp) rotated -45deg turns the sharp corner into a tail pointing
@@ -56,17 +58,25 @@ export function iconFor(pin: PinInput): L.DivIcon {
   const cached = cache.get(key);
   if (cached) return cached;
 
+  const isAccepted =
+    (pin.type === "issue" || pin.type === "request") && pin.status === "in_progress";
   const isResolved = (pin.type === "issue" || pin.type === "request") && pin.status === "resolved";
   const isPrivate =
     (pin.type === "announcement" || pin.type === "event") && pin.visibility === "members";
   // A pin can't be both resolved (issue/request only) and a past event (event only), so
   // there's no collision to design around — same reasoning as the ✓/🔒 corner-mark slot.
-  const isMuted = isResolved || pin.isPastEvent === true;
+  const isPastEventMuted = pin.isPastEvent === true;
 
   const head = sizeFor(pin.upvote_count + pin.comment_count);
   const tail = Math.round(head * TAIL_RATIO);
   const height = head + tail;
-  const ringColor = isMuted ? RESOLVED_RING : TYPE_COLORS[pin.type];
+  const ringColor = isAccepted
+    ? ACCEPTED_RING
+    : isResolved
+      ? COMPLETED_RING
+      : isPastEventMuted
+        ? PAST_EVENT_RING
+        : TYPE_COLORS[pin.type];
 
   // The centre only ever shows a photo (our own /media/ URL, generated server-side) or a
   // fixed glyph string from TYPE_GLYPHS — never report title/author text — so this string
@@ -96,10 +106,12 @@ export function iconFor(pin: PinInput): L.DivIcon {
       ? `<span class="pin-corner" style="top:${cornerTop}px" title="Yalnızca üyelere">🔒</span>`
       : "";
 
+  const dropClass = isResolved ? " pin-completed" : isPastEventMuted ? " pin-past-event" : "";
+  const dropStyle = `width:${head}px;height:${head}px;border-color:${ringColor}`;
+
   const html = `
     <div class="pin-wrap">
-      <div class="pin-drop${isMuted ? " pin-resolved" : ""}"
-           style="width:${head}px;height:${head}px;border-color:${ringColor}">
+      <div class="pin-drop${dropClass}" style="${dropStyle}">
         <div class="pin-drop-inner">${centerHtml}</div>
       </div>
       ${badgeHtml}

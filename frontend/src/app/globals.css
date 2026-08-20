@@ -71,9 +71,13 @@ textarea {
   justify-content: center;
 }
 
-.pin-resolved {
+.pin-past-event {
   opacity: 0.65;
   filter: grayscale(35%);
+}
+
+.pin-completed {
+  background: rgba(22, 101, 52, 0.4);
 }
 
 .pin-glyph {
@@ -85,6 +89,12 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Inset box-shadows paint over a replaced element's own content, so this tints the photo
+   itself green for a completed report rather than just the pin behind it. */
+.pin-completed .pin-photo {
+  box-shadow: inset 0 0 0 999px rgba(22, 101, 52, 0.35);
 }
 
 .pin-badge {

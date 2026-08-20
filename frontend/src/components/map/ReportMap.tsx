@@ -122,25 +122,51 @@ export default function ReportMap({
             })}
           >
             <Tooltip direction="top" offset={[0, -6]}>
-              <strong>{report.title}</strong>
-              <div>
-                {TYPE_LABELS[report.type]}
-                {report.type === "issue" || report.type === "request"
-                  ? ` · ${STATUS_LABELS[report.status]}`
-                  : report.type === "event" && report.event_starts_at && report.event_ends_at
-                    ? ` · ${formatEventRange(report.event_starts_at, report.event_ends_at)}`
-                    : report.visibility === "members"
-                      ? " · Yalnızca üyelere"
-                      : ""}
-              </div>
-              {report.organization_name && (
+              <div
+                style={{
+                  position: "relative",
+                  paddingRight: report.organization_logo_url ? "1.6rem" : 0,
+                }}
+              >
+                {report.organization_logo_url && (
+                  <Image
+                    src={report.organization_logo_url}
+                    alt=""
+                    width={22}
+                    height={22}
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -4,
+                      borderRadius: "999px",
+                      border: "1.5px solid #d8dce2",
+                      background: "#fff",
+                      objectFit: "contain",
+                    }}
+                  />
+                )}
+                <strong>{report.title}</strong>
                 <div>
-                  {report.organization_name}
-                  {report.organization_parent_name ? ` · ${report.organization_parent_name}` : ""}
+                  {TYPE_LABELS[report.type]}
+                  {report.type === "issue" || report.type === "request"
+                    ? ` · ${STATUS_LABELS[report.status]}`
+                    : report.type === "event" && report.event_starts_at && report.event_ends_at
+                      ? ` · ${formatEventRange(report.event_starts_at, report.event_ends_at)}`
+                      : report.visibility === "members"
+                        ? " · Yalnızca üyelere"
+                        : ""}
                 </div>
-              )}
-              <div>
-                ▲ {report.upvote_count} · 💬 {report.comment_count}
+                {report.organization_name && (
+                  <div>
+                    {report.organization_name}
+                    {report.organization_parent_name
+                      ? ` · ${report.organization_parent_name}`
+                      : ""}
+                  </div>
+                )}
+                <div>
+                  ▲ {report.upvote_count} · 💬 {report.comment_count}
+                </div>
               </div>
               {report.images.length > 0 && (
                 // Up to 4 photos: 1–3 lay out in a single row, 4 wraps into a 2×2 grid —
@@ -167,12 +193,38 @@ export default function ReportMap({
               )}
             </Tooltip>
             <Popup>
-              <strong>{report.title}</strong>
-              {report.description && <p style={{ margin: "0.25rem 0" }}>{report.description}</p>}
-              <small>
-                {TYPE_LABELS[report.type]} · {STATUS_LABELS[report.status]}
-                {report.author_username ? ` · bildiren: ${report.author_username}` : ""}
-              </small>
+              <div
+                style={{
+                  position: "relative",
+                  paddingRight: report.organization_logo_url ? "1.6rem" : 0,
+                }}
+              >
+                {report.organization_logo_url && (
+                  <Image
+                    src={report.organization_logo_url}
+                    alt=""
+                    width={22}
+                    height={22}
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -4,
+                      borderRadius: "999px",
+                      border: "1.5px solid #d8dce2",
+                      background: "#fff",
+                      objectFit: "contain",
+                    }}
+                  />
+                )}
+                <strong>{report.title}</strong>
+                {report.description && (
+                  <p style={{ margin: "0.25rem 0" }}>{report.description}</p>
+                )}
+                <small>
+                  {TYPE_LABELS[report.type]} · {STATUS_LABELS[report.status]}
+                  {report.author_username ? ` · bildiren: ${report.author_username}` : ""}
+                </small>
+              </div>
               <div
                 style={{
                   marginTop: "0.5rem",
