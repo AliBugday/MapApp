@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 
 import {
   ApiError,
@@ -18,6 +19,9 @@ import AuthPanel from "@/components/auth/AuthPanel";
 import MapLegend from "./MapLegend";
 import type { LatLng } from "./types";
 import NewReportForm from "./NewReportForm";
+import TypeFilter from "./TypeFilter";
+
+const ALL_TYPES = Object.keys(TYPE_LABELS) as Array<Report["type"]>;
 
 // Leaflet touches `window` while it is being imported, which crashes server
 // rendering, so the map is loaded only in the browser.
@@ -40,6 +44,8 @@ export default function MapPanel() {
     confirmLocationPicking,
   } = useUser();
   const [reports, setReports] = useState<Report[]>([]);
+  const [activeTypes, setActiveTypes] = useState<Set<Report["type"]>>(new Set(ALL_TYPES));
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [pending, setPending] = useState<LatLng | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,6 +192,20 @@ export default function MapPanel() {
     [user, reports],
   );
 
+  const handleToggleType = useCallback((type: Report["type"]) => {
+    setActiveTypes((current) => {
+      // Never allow the last active type to be turned off — an empty set would silently
+      // blank both the map and the list with no visible way to tell why.
+      if (current.has(type) && current.size === 1) return current;
+      const next = new Set(current);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
+  const visibleReports = reports.filter((report) => activeTypes.has(report.type));
+
   const homeLocation =
     user?.home_latitude != null && user?.home_longitude != null
       ? { latitude: user.home_latitude, longitude: user.home_longitude }
@@ -199,7 +219,7 @@ export default function MapPanel() {
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
       <div style={{ flex: 1, position: "relative" }}>
         <ReportMap
-          reports={reports}
+          reports={visibleReports}
           pending={pending}
           onMapClick={handleMapClick}
           onToggleUpvote={handleToggleUpvote}
@@ -208,6 +228,7 @@ export default function MapPanel() {
           onBoundsChange={setBbox}
           homeLocation={homeLocation}
           workLocation={workLocation}
+          selectedReportId={selectedReportId}
         />
         <MapLegend />
       </div>
@@ -218,6 +239,7 @@ export default function MapPanel() {
           borderLeft: "1px solid var(--border)",
           padding: "1rem",
           overflowY: "auto",
+          background: "var(--surface)",
         }}
       >
         {error && (
@@ -290,20 +312,37 @@ export default function MapPanel() {
         )}
 
         <h2 style={{ fontSize: "0.95rem", marginTop: "1.5rem" }}>
-          Bildirimler {loading ? "" : `(${reports.length})`}
+          Bildirimler {loading ? "" : `(${visibleReports.length})`}
         </h2>
+
+        <TypeFilter allTypes={ALL_TYPES} activeTypes={activeTypes} onToggleType={handleToggleType} />
+
         {loading && <p style={{ color: "var(--muted)" }}>Yükleniyor…</p>}
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {reports.map((report) => (
-            <li
-              key={report.id}
-              style={{ padding: "0.5rem 0", borderBottom: "1px solid var(--border)" }}
-            >
-              <strong style={{ fontSize: "0.9rem" }}>{report.title}</strong>
-              <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
-                {TYPE_LABELS[report.type]} · {STATUS_LABELS[report.status]} · ▲{" "}
-                {report.upvote_count}
-              </div>
+          {visibleReports.map((report) => (
+            <li key={report.id}>
+              <button
+                type="button"
+                className="report-list-item"
+                onClick={() => setSelectedReportId(report.id)}
+              >
+                {report.images[0]?.thumbnail_url && (
+                  <Image
+                    src={report.images[0].thumbnail_url}
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="report-list-thumb"
+                  />
+                )}
+                <div>
+                  <strong style={{ fontSize: "0.9rem" }}>{report.title}</strong>
+                  <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
+                    {TYPE_LABELS[report.type]} · {STATUS_LABELS[report.status]} · ▲{" "}
+                    {report.upvote_count}
+                  </div>
+                </div>
+              </button>
             </li>
           ))}
         </ul>

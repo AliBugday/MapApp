@@ -24,4 +24,7 @@ export interface ReportMapProps {
   /** Fired on mount and on every pan/zoom with the current viewport as
    * "minLng,minLat,maxLng,maxLat" — what the backend's ?bbox= param expects. */
   onBoundsChange: (bbox: string) => void;
+  /** Set from the sidebar list (not map interaction) to fly to and open a report's
+   * popup — lets a list click show the same on-map preview a pin click would. */
+  selectedReportId?: number | null;
 }

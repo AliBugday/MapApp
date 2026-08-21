@@ -2,6 +2,8 @@
   --border: #d8dce2;
   --muted: #5b6470;
   --accent: #1f6feb;
+  --surface: #f3f4f6;
+  --surface-alt: #e8eaed;
 }
 
 * {
@@ -138,4 +140,32 @@ textarea {
   justify-content: center;
   font-size: 10px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.report-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.4rem;
+  margin: 0 -0.4rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+
+.report-list-item:hover {
+  background: var(--surface-alt);
+}
+
+.report-list-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
 }

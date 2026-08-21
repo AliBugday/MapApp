@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMapEvents } from "react-leaflet";
+import { useEffect, useRef } from "react";
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import UpvoteButton from "@/components/UpvoteButton";
+import type { Report } from "@/lib/api";
 import { formatEventRange } from "@/lib/format";
 import { STATUS_LABELS } from "@/lib/statusLabels";
 import { TYPE_LABELS } from "@/lib/typeLabels";
@@ -61,6 +62,33 @@ function BoundsHandler({ onBoundsChange }: { onBoundsChange: (bbox: string) => v
   return null;
 }
 
+// Flies to and opens the popup of whichever report the sidebar list last selected. A plain
+// prop change rather than map interaction, so this has to reach into the map imperatively
+// via refs (react-leaflet has no declarative "open this marker's popup" API).
+function FlyToSelected({
+  reportId,
+  reports,
+  markerRefs,
+}: {
+  reportId: number | null | undefined;
+  reports: Report[];
+  markerRefs: React.RefObject<Record<number, L.Marker | null>>;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (reportId == null) return;
+    const report = reports.find((r) => r.id === reportId);
+    const marker = markerRefs.current[reportId];
+    if (!report || !marker) return;
+    map.flyTo([report.latitude, report.longitude], Math.max(map.getZoom(), 15));
+    marker.openPopup();
+    // Only reportId should retrigger this — reports/markerRefs/map are stable identities
+    // (or, for `reports`, change on every fetch without the selection itself changing).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportId]);
+  return null;
+}
+
 // Fixed, built once — unlike report pins there are at most two of these and they change
 // rarely, so markerIcon.ts's per-render caching machinery would be overkill here.
 const HOME_ICON = L.divIcon({
@@ -86,7 +114,10 @@ export default function ReportMap({
   homeLocation,
   workLocation,
   onBoundsChange,
+  selectedReportId,
 }: ReportMapProps) {
+  const markerRefs = useRef<Record<number, L.Marker | null>>({});
+
   return (
     <MapContainer
       center={[center.latitude, center.longitude]}
@@ -99,6 +130,7 @@ export default function ReportMap({
       />
       <ClickHandler onMapClick={onMapClick} />
       <BoundsHandler onBoundsChange={onBoundsChange} />
+      <FlyToSelected reportId={selectedReportId} reports={reports} markerRefs={markerRefs} />
 
       {reports.map((report) => {
         const isPastEvent =
@@ -109,6 +141,9 @@ export default function ReportMap({
         return (
           <Marker
             key={report.id}
+            ref={(instance) => {
+              markerRefs.current[report.id] = instance;
+            }}
             position={[report.latitude, report.longitude]}
             icon={iconFor({
               type: report.type,
