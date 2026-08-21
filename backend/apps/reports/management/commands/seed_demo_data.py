@@ -254,7 +254,7 @@ ISSUES = [
         comments=3,
     ),
     dict(
-        title="Bir gurup kopek yollari kapatiyor",
+        title="Bir grup kopek yollari kapatiyor",
         place="dikmen",
         description="Vatandaslar yanlarindan gecmekten korkuyor.",
         photo="sokak-hayvani.jpg",
